@@ -26,5 +26,4 @@ void destroy_token(Token t) {
   }
   free(t->lexeme);
   free(t);
-  printf("freed\n");
 }

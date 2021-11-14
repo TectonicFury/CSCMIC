@@ -2,7 +2,7 @@
 #define SCANNER_H
 #include <stdlib.h>
 #include <string.h>
-#include "includes/resizable_array.h"
+#include "../../includes/resizable_array.h"
 #include "Token.h"
 #include "TokenType.h"
 
@@ -16,7 +16,6 @@ ARRAY(Token)
 struct Scanner {
   str source;
   Token_array tokens;
-  // int current;
   int line;
 };
 int is_at_end(Scanner s, int current) {
@@ -102,6 +101,24 @@ void scan_token(Scanner s, int *current) {
       s->line++;
       *current = *current + 1;
       break;
+    case '"':
+      *current = *current + 1;
+      int start = *current;
+      while (s->source[*current] != '"' && !is_at_end(s, *current)) {
+        if (s->source[*current] == '\n') {
+          s->line++;
+        }
+        *current = *current + 1;
+      }
+      str temp_str = malloc((*current - start + 1) * sizeof(char));
+      for (int i = 0; i < *current - start; i++) {
+        temp_str[i] = s->source[start + i];
+      }
+      temp_str[*current - start] = '\0';
+      *current = *current + 1;
+      add_Token_array(s->tokens, make_token(STRING, temp_str, temp_str, s->line));
+      free(temp_str);
+      break;
     default:
       printf("no matching token\n");
       break;
@@ -114,7 +131,12 @@ void scan_tokens(Scanner s) {
     scan_token(s, &current);
   }
 }
-
+void free_scanner(Scanner *s) {
+  free((*s)->source);
+  free_Token_array(&(*s)->tokens, destroy_token);
+  free(*s);
+  *s = NULL;
+}
 void get_expression(str input) {
   int c;
   int paren_balance = 0;

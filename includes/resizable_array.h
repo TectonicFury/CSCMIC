@@ -30,5 +30,13 @@ void add_ ## TYPE ## _array(TYPE ## _array a, TYPE val) { \
   } \
   a->arr[a->size] = val; \
   a->size++; \
+} \
+void free_ ## TYPE ## _array(TYPE ## _array *a, void (*destruct) (TYPE)) { \
+  for (int i = 0; i < (*a)->size; i++) { \
+    destruct((*a)->arr[i]); \
+  } \
+  free((*a)->arr); \
+  free(*a); \
+  *a = NULL; \
 }
 #endif
