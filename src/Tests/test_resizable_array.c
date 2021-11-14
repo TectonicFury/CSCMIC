@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "includes/resizable_array.h"
+#include "../../includes/resizable_array.h"
 
 ARRAY(int)
 typedef char *str;

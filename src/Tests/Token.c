@@ -1,9 +1,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "TokenType.h"
-#include "Token.h"
-#include "includes/hash_table.h"
+#include "../includes/TokenType.h"
+#include "../includes/Token.h"
+#include "../../includes/hash_table.h"
 
 Token make_token(TokenType type, char *lexeme, char *literal, int line) {
   Token token = (Token)malloc(sizeof(struct Token));
