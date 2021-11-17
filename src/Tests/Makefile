@@ -9,14 +9,17 @@ simple_interpreter.o: simple_interpreter.c Expr.h
 Expr.o: Expr.h Expr.c
 	clang -c Expr.c $(CFLAGS)
 
-test_scanner: test_scanner.o Token.o
-	clang -o test_scanner test_scanner.o Token.o $(CFLAGS1)
+test_scanner: test_scanner.o Token.o prime.o
+	clang -o test_scanner test_scanner.o Token.o prime.o $(CFLAGS1)
 test_scanner.o: test_scanner.c
 	clang -c test_scanner.c $(CFLAGS)
 
+prime.o: prime.c
+	clang -c prime.c $(CFLAGS)
+
 Token: Token.o
 	clang -o Token Token.o $(CFLAGS)
-Token.o: Token.c 
+Token.o: Token.c
 	clang -c Token.c $(CFLAGS)
 
 resizable_array: test_resizable_array.o
@@ -26,4 +29,4 @@ test_resizable_array.o: test_resizable_array.c
 
 
 clean:
-	rm *.o simple-scheme
+	rm *.o simple-scheme test_scanner

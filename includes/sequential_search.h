@@ -1,3 +1,4 @@
+// don't free something you didn't allocate memory for
 #ifndef SQS_H
 #define SQS_H
 #include <stdlib.h>

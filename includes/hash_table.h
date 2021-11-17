@@ -14,7 +14,7 @@ struct KEY ## _ ## VALUE ## _hash_table { \
   int size; \
   int capacity; \
   double load_factor; \
-};\
+}; \
 \
 void initialise_ ## KEY ## _ ## VALUE ## _hash_table_array(KEY ## _ ## VALUE ## _hash_table_array *ht) { \
   *ht = malloc(M_LENGTH * sizeof(KEY ## _ ## VALUE ## _listST)); /* size of listST ptr is used as it is array of pointers to lists */ \
@@ -30,7 +30,7 @@ void init_ ## KEY ## _ ## VALUE ## _hash_table(KEY ## _ ## VALUE ## _hash_table 
   initialise_ ## KEY ## _ ## VALUE ## _hash_table_array(&((*h_table)->ht)); \
 } \
 void insert_ ## KEY ## _ ## VALUE ## _hash_table_array(KEY ## _ ## VALUE ## _hash_table_array *ht, KEY key, VALUE value, int modulo) { \
-  int index = HASH_FUNC ## _(key, modulo);\
+  unsigned int index = HASH_FUNC ## _(key, modulo);\
   (*ht)[index] = insert_ ## KEY ## _ ## VALUE ## _listST((*ht)[index], key, value); \
 } \
 \
@@ -44,7 +44,7 @@ void free_ ## KEY ## _ ## VALUE ## _hash_table_array(KEY ## _ ## VALUE ## _hash_
 \
 /* resizing and rehashing the 'ht' array using a prime number greater than twice the current M */ \
 void resize_and_rehash_ ## KEY ## _ ## VALUE ## _hash_table(KEY ## _ ## VALUE ## _hash_table h_table, void (*destruct) (KEY ## _ ## VALUE ## _pairST)) { \
-  int new_bucket_capacity = prime_twice(h_table->capacity); \
+  unsigned int new_bucket_capacity = prime_twice(h_table->capacity); \
   KEY ## _ ## VALUE ## _hash_table_array ht_new = malloc(new_bucket_capacity * sizeof(KEY ## _ ## VALUE ## _listST)); \
   for (size_t i = 0; i < new_bucket_capacity; i++) { \
     ht_new[i] = NULL; /* this is a must otherwise segfault */\
