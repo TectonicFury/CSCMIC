@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include "../includes/Scanner.h"
-
+// #include "../includes/Scanner.h"
+#include "../includes/Expr.h"
 int main(int argc, char const *argv[]) {
   Scanner s;
   char input[MAX_IN_LEN];
@@ -12,13 +12,13 @@ int main(int argc, char const *argv[]) {
     printf("input = %s\n", input);
     strcpy(s->source, input);
     scan_tokens(s);
-    // printf("tokens->size = %d\n", s->tokens->size);
-    // for (int i = 0; i < s->tokens->size; i++) {
-    //   printf("%s\n", s->tokens->arr[i]->lexeme);
-    // }
-
+    printf("tokens->size = %d\n", s->tokens->size);
+    for (int i = 0; i < s->tokens->size; i++) {
+      printf("%s\n", s->tokens->arr[i]->lexeme);
+    }
+    print_eval_value(eval(s));
     // take scanner input and make it into a tree-list structure
-    
+
     free_scanner(&s); // prevent memory leaks
   }
 

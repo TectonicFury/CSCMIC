@@ -6,13 +6,16 @@ simple-scheme: $(OBJECTS)
 	clang -o simple-scheme $(OBJECTS) $(CFLAGS)
 simple_interpreter.o: simple_interpreter.c Expr.h
 	clang -c simple_interpreter.c $(CFLAGS)
-Expr.o: Expr.h Expr.c
+Expr.o: Expr.c
 	clang -c Expr.c $(CFLAGS)
 
-test_scanner: test_scanner.o Token.o prime.o
-	clang -o test_scanner test_scanner.o Token.o prime.o $(CFLAGS1)
+test_scanner: test_scanner.o Token.o prime.o Expr.o
+	clang -o test_scanner test_scanner.o Token.o prime.o Expr.o $(CFLAGS1)
 test_scanner.o: test_scanner.c
 	clang -c test_scanner.c $(CFLAGS)
+
+test_expr:Expr.o Token.o prime.o
+	clang -o test_expr Token.o prime.o Expr.o $(CFLAGS1)
 
 prime.o: prime.c
 	clang -c prime.c $(CFLAGS)

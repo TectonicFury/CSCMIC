@@ -54,8 +54,10 @@ unsigned int str_hash_(str s, int M) {
   }
   return hash % M;
 }
-
+#ifndef TOKEN_ARRAY_DEF
+#define TOKEN_ARRAY_DEF
 ARRAY(Token)
+#endif
 HashTable(str, TokenType, str_equal, str_hash) // need to add hash function for strings
 
 struct Scanner {
@@ -270,6 +272,7 @@ void scan_tokens(Scanner s) {
   while (!is_at_end(s, current)) {
     scan_token(s, &current);
   }
+  add_Token_array(s->tokens, make_token(_EOF_, "<EOF>", NULL, s->line));
 }
 
 void free_scanner(Scanner *s) {
