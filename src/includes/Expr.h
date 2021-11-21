@@ -4,7 +4,7 @@
 #include "Scanner.h"
 typedef struct Expr *expr;
 typedef struct Eval_Value * Eval_Value;
-
+typedef struct Env *env;
 typedef enum ValueType{NUMBER_VAL, STRING_VAL, LIST_VAL, FUNCTION_VAL, NIL_VAL} ValueType;
 
 struct Eval_Value {
@@ -24,7 +24,7 @@ struct Expr { // this structure is fit for holding a single-token expression as 
 // int is_numeric(char c);
 // double get_number(char* expr, int* start, int lim); //gets a number from the user string
 // int is_operator(char c); //checks if the character is an operator (+ *)
-Eval_Value eval(Scanner s);
+Eval_Value eval(Scanner s, env e);
 void print_eval_value(Eval_Value v);
 expr create_expr(Token_array t_arr, int *start_index); //creates a linked list on the lines of a LISP list to enable quick processing of the user expression string
 // void free_expr(expr e); //recursively frees the Expression linked list

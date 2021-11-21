@@ -3,6 +3,23 @@
 #include "../includes/Expr.h"
 // #include "../includes/Scanner.h"
 
+// code and data are same
+
+HashTable(str, expr, str_equal, str_hash)
+
+struct Env {
+  str_expr_hash_table table;
+  env next;
+};
+
+void make_env(env *environment) {
+  env e = malloc(sizeof(struct Env));
+  init_str_expr_hash_table(&(e->table));
+  printf("env h_table %p\n", e->table);
+  printf("env ht pointer = %p\n", e->table->ht);
+  e->next = NULL;
+  *environment = e;
+}
 Eval_Value make_value(expr e) {
   Eval_Value v = malloc(sizeof(struct Eval_Value));
   switch (e->expr_type) {
@@ -14,6 +31,13 @@ Eval_Value make_value(expr e) {
       v->type = STRING_VAL;
       v->value = e->value;
       return v;
+    case LEFT_PAREN:
+      if (((expr)e->value)->expr_type == DEFINE) {
+        v->type = STRING_VAL;
+        v->value = "; ok\n";
+        return v;
+      }
+      return NULL;
     default:
       printf("in progress\n");
       return NULL;
@@ -30,23 +54,63 @@ expr make_expr_node(Token t) {
   return e;
 }
 
-int is_self_evaluating(expr e) {
-  return e->expr_type == NUMBER || e->expr_type == STRING;
+int is_self_evaluating(expr exp) {
+  return exp->expr_type == NUMBER || exp->expr_type == STRING;
 }
 
-int is_variable(expr e) {
-  return e->expr_type == IDENTIFIER;
+int is_variable(expr exp) {
+  return exp->expr_type == IDENTIFIER;
+}
+int is_definition(expr exp) {
+  if (((expr)exp->value)->expr_type == DEFINE) return 1;
+  return 0;
 }
 
-Eval_Value eval_self_evaluating(expr e) {
-  return make_value(e);
+Eval_Value eval_self_evaluating(expr exp, env e) {
+  return make_value(exp);
 }
+str definition_variable(expr exp) {
+  expr t = exp;
+  t = t->value;
+  while (t->expr_type != IDENTIFIER) {
+    t = t->next;
+  }
+  return t->value;
+}
+expr definiton_value(expr exp) {
+  expr t = exp;
+  t = t->value;
+  while (t->expr_type != IDENTIFIER) {
+    t = t->next;
+  }
+  return t->next;
+}
+void destroy_str_expr_pair(str_expr_pairST p) {
 
-Eval_Value eval_expr(expr e) {
-  if (is_self_evaluating(e)) {
-    return eval_self_evaluating(e);
-  } else if (is_variable(e)) {
-    // need to add env hash-table
+}
+Eval_Value eval_definition(expr exp, env e) {
+  insert_str_expr_hash_table(&e->table, definition_variable(exp), definiton_value(exp), destroy_str_expr_pair);
+  return make_value(exp);
+}
+Eval_Value lookup_variable_value(expr exp, env e) {
+  while (e != NULL) {
+    str_expr_pairST p_val = find_in_str_expr_hash_table(e->table, exp->value);
+    if (p_val) {
+      return make_value(p_val->value);
+    }
+    e = e->next;
+  }
+  printf("variable %s not found\n", (char*)exp->value);
+  return NULL;
+}
+Eval_Value eval_expr(expr exp, env e) {
+  if (is_self_evaluating(exp)) {
+    return eval_self_evaluating(exp, e);
+  } else if (is_variable(exp)) {
+    return lookup_variable_value(exp, e);
+  } else if (is_definition(exp)) {
+    // printf("DEFINE found\n");
+    return eval_definition(exp, e);
   }
   return NULL;
 }
@@ -88,7 +152,22 @@ expr create_expr(Token_array t_arr, int *start_index) {
   Token t;
 
   t = t_arr->arr[*start_index]; // token at position *start_index
-
+  // switch (t->type) {
+  //   case LEFT_PAREN:
+  //     printf("t->type = %s\n", "LEFT_PAREN");
+  //     break;
+  //   case RIGHT_PAREN:
+  //     printf("t->type = %s\n", "RIGHT_PAREN");
+  //     break;
+  //   case IDENTIFIER:
+  //     printf("t->type = %s\n", "IDENTIFIER");
+  //     break;
+  //   case NUMBER:
+  //     printf("t->type = %s\n", "NUMBER");
+  //     break;
+  //   default:
+  //     break;
+  // }
   if (t->type == _EOF_) return NULL;
 
   if (t->type == RIGHT_PAREN) {
@@ -111,10 +190,10 @@ expr create_expr(Token_array t_arr, int *start_index) {
   return e;
 }
 
-Eval_Value eval(Scanner s) {
+Eval_Value eval(Scanner s, env e) {
   int start_index = 0;
-  expr e = create_expr(s->tokens, &start_index);
-  Eval_Value val = eval_expr(e);
+  expr exp = create_expr(s->tokens, &start_index);
+  Eval_Value val = eval_expr(exp, e);
   // free_expr(e); //need to free the space before returning
   return val;
 }
@@ -130,7 +209,9 @@ void print_eval_value(Eval_Value v) {
 int main(int argc, char const *argv[]) {
   Scanner s;
   char input[MAX_IN_LEN];
-
+  env environment;
+  make_env(&environment);
+  printf("environment->table = %p\n", environment->table);
   while (1) {
     printf("\n]=> ");
     init_scanner(&s, input);
@@ -143,10 +224,10 @@ int main(int argc, char const *argv[]) {
     //   printf("%s\n", s->tokens->arr[i]->lexeme);
     // }
     printf("\n;value: ");
-    print_eval_value(eval(s));
+    print_eval_value(eval(s, environment));
     // take scanner input and make it into a tree-list structure
 
-    free_scanner(&s); // prevent memory leaks
+    // free_scanner(&s); // prevent memory leaks
   }
   return 0;
 }
