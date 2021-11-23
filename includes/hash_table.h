@@ -1,6 +1,6 @@
 #ifndef HASHT_H
 #define HASHT_H
-#define M_LENGTH 97
+#define M_LENGTH 7
 #include "sequential_search.h"
 #include "prime.h"
 

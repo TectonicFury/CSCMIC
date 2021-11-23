@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../includes/Expr.h"
-// #include "../includes/Scanner.h"
 
 // code and data are same
 
@@ -11,6 +10,7 @@ struct Env {
   str_expr_hash_table table;
   env next;
 };
+
 int is_pair(expr exp);
 int is_variable(expr exp);
 
@@ -22,6 +22,7 @@ void make_env(env *environment) {
   e->next = NULL;
   *environment = e;
 }
+
 Eval_Value make_value(expr exp) {
   Eval_Value v = malloc(sizeof(struct Eval_Value));
   switch (exp->expr_type) {
@@ -42,13 +43,13 @@ Eval_Value make_value(expr exp) {
       v->type = LIST_VAL;
       v->value = exp;
       return v;
-      // printf("returning NULL\n");
-      // return NULL;
     default:
       printf("in progress\n");
       return NULL;
   }
 }
+
+expr eval_expr(expr exp, env e);
 
 expr make_expr_node(Token t) {
   expr e = malloc(sizeof(struct Expr));
@@ -67,6 +68,7 @@ int is_number(expr exp) {
 int is_string(expr exp) {
   return exp->expr_type == STRING;
 }
+
 int is_keyword(expr exp) {
   switch (exp->expr_type) {
     case IF:
@@ -88,28 +90,39 @@ int is_keyword(expr exp) {
       return 0;
   }
 }
+
 void print_expr(expr exp) {
-  // printf("\nprint_expr >>\n");
   if (!exp) return;
   if (is_pair(exp)) {
-    printf(" (");
+    printf("(");
     print_expr(exp->value);
-    printf(") ");
+    printf(")");
     print_expr(exp->next);
     return;
   }
   if (is_number(exp)) {
+    if (exp->next == NULL) {
+      printf("%f", *((double*)exp->value));
+      return;
+    }
       printf("%f ", *((double*)exp->value));
       print_expr(exp->next);
       return;
     }
   if (is_string(exp)) {
+    if (exp->next == NULL) {
+      printf("%s", (char*)exp->value);
+      return;
+    }
     printf("%s ", (char*)exp->value);
     print_expr(exp->next);
     return;
   }
   if (is_variable(exp) || is_keyword(exp)) {
-    // printf("%p\n", exp->value);
+    if (exp->next == NULL) {
+      printf("%s", (char*)exp->value);
+      return;
+    }
     printf("%s ", (char*)exp->value);
     print_expr(exp->next);
     return;
@@ -135,6 +148,7 @@ void print_expr(expr exp) {
     return;
   }
 }
+
 int is_pair(expr exp) {
   // printf("exp pointer lambda = %p\n", exp);
   if (exp->expr_type == LEFT_PAREN) return 1;
@@ -149,13 +163,18 @@ int is_variable(expr exp) {
   return exp->expr_type == IDENTIFIER;
 }
 int is_definition(expr exp) {
-  if (((expr)exp->value)->expr_type == DEFINE) return 1;
+  if (is_pair(exp) && ((expr)exp->value)->expr_type == DEFINE) return 1;
+  return 0;
+}
+int is_lambda(expr exp) {
+  if (is_pair(exp) && ((expr)exp->value)->expr_type == LAMBDA) return 1;
   return 0;
 }
 
-Eval_Value eval_self_evaluating(expr exp, env e) {
-  return make_value(exp);
+expr eval_self_evaluating(expr exp, env e) {
+  return exp;
 }
+
 expr car(expr exp) {
   if (is_pair(exp)) {
     return exp->value;
@@ -170,12 +189,14 @@ expr cadr(expr exp) {
   }
   return NULL;
 }
+
 expr caddr(expr exp) {
   if (is_pair(exp)) {
     return ((expr)exp->value)->next->next;
   }
   return NULL;
 }
+
 str definition_variable(expr exp) {
   expr t = cadr(exp);
   if (is_variable(t)) { // is cadr a symbol
@@ -185,6 +206,7 @@ str definition_variable(expr exp) {
   }
   return NULL;
 }
+
 expr make_lambda(expr args, expr body) {
   expr arg_list = malloc(sizeof(struct Expr));
   arg_list->expr_type = LEFT_PAREN;
@@ -203,6 +225,15 @@ expr make_lambda(expr args, expr body) {
   return lambda_paren;
 }
 
+expr lambda_parameters(expr exp) {
+  // this works الحمد لله
+  return ((expr)exp->value)->next->value;
+}
+
+expr lambda_body(expr exp) {
+  // this works الحمد لله
+  return ((expr)exp->value)->next->next;
+}
 expr definition_value(expr exp) {
   expr t = cadr(exp);
   if (is_variable(t)) {
@@ -215,24 +246,63 @@ expr definition_value(expr exp) {
 void destroy_str_expr_pair(str_expr_pairST p) {
 
 }
-Eval_Value eval_definition(expr exp, env e) {
-  printf("definition_variable = %s\n", definition_variable(exp));
-  insert_str_expr_hash_table(&e->table, definition_variable(exp), definition_value(exp), destroy_str_expr_pair);
-  return make_value(exp);
+
+expr eval_definition(expr exp, env e) {
+  insert_str_expr_hash_table(&e->table, definition_variable(exp), eval_expr(definition_value(exp), e), destroy_str_expr_pair);
+  expr ret_val = malloc(sizeof(struct Expr));
+  ret_val->expr_type = STRING;
+  ret_val->value = "ok";
+  return ret_val;
 }
-Eval_Value lookup_variable_value(expr exp, env e) {
+expr make_procedure(expr exp, env e) {
+  expr s = malloc(sizeof(struct Expr));
+  s->expr_type = LEFT_PAREN;
+
+  expr t = malloc(sizeof(struct Expr));
+  t->expr_type = PROCEDURE;
+  t->value = lambda_parameters(exp); // this link contains the list pf params of the procedure
+  t->next = lambda_body(exp); // this link contains the body of the procedure
+
+  s->value = t;
+  s->next = (expr)e; //just storing a link, will need to recast to env
+  return s;
+}
+int is_if(expr exp) {
+  return is_pair(exp) && ((expr)exp->value)->expr_type == IF;
+}
+expr if_predicate(expr exp) {
+  return ((expr)exp->value)->next;
+}
+expr if_consequent(expr exp) {
+  return((expr) exp->value)->next->next;
+}
+expr if_alternative(expr exp) {
+  return ((expr)exp->value)->next->next->next;
+}
+
+int is_true(expr exp) {
+  return exp->expr_type != NIL && exp->expr_type != FALSE;
+}
+
+expr eval_if(expr exp, env e) {
+  if (is_true(eval_expr(if_predicate(exp), e))) return eval_expr(if_consequent(exp), e);
+  return eval_expr(if_alternative(exp), e);
+}
+expr eval_lambda(expr exp, env e) {
+  return make_procedure(exp, e);
+}
+expr lookup_variable_value(expr exp, env e) {
   while (e != NULL) {
     str_expr_pairST p_val = find_in_str_expr_hash_table(e->table, exp->value);
     if (p_val) {
-      printf("found lookup\n");
-      return make_value(p_val->value);
+      return p_val->value;
     }
     e = e->next;
   }
   printf("variable %s not found\n", (char*)exp->value);
   return NULL;
 }
-Eval_Value eval_expr(expr exp, env e) {
+expr eval_expr(expr exp, env e) {
   if (is_self_evaluating(exp)) {
     return eval_self_evaluating(exp, e);
   } else if (is_variable(exp)) {
@@ -240,40 +310,22 @@ Eval_Value eval_expr(expr exp, env e) {
   } else if (is_definition(exp)) {
     // printf("DEFINE found\n");
     return eval_definition(exp, e);
+  } else if (is_if(exp)) {
+    return eval_if(exp, e);
+  } else if (is_lambda(exp)) {
+    // printf("1\n");
+    // print_expr(lambda_parameters(exp));
+    // printf("\n");
+    // print_expr(lambda_body(exp));
+    // printf("\nevaling lambda\n");
+    return eval_lambda(exp, e);
+  } else if (is_application(exp)) {
+    return eval_application(exp, e);
+  } else if (exp->expr_type == NIL) {
+    return exp;
   }
   return NULL;
 }
-
-
-// int is_quoted(expr e);
-// int is_assignment(expr e);
-// int is_definition(expr e);
-// int is_if(expr e);
-// int is_lambda(expr e);
-// int is_begin(expr e);
-// int is_cond(expr e);
-// int is_application(expr r);
-//
-// int is_pair(expr e) {
-//   if (e->type_tag == PAIR) return 1;
-//   return 0;
-// }
-//
-// int is_symbol(expr e) {
-//   return e->type_tag == SYMBOL;
-// }
-// int is_number(expr e) {
-//   return (e->type_tag == NUMBER);
-// }
-//
-// int is_string(expr e) {
-//   return (e->type_tag == STRING);
-// }
-//
-// int is_tagged_list(expr e, EXPR_TYPE type_tag) {
-//   if (is_pair(e) && ((expr)e->value)->type_tag == type_tag) return 1;
-//   return 0;
-// }
 
 expr create_expr(Token_array t_arr, int *start_index) {
   // creates the expr using the user input, essentially a parsing step
@@ -303,23 +355,30 @@ expr create_expr(Token_array t_arr, int *start_index) {
   return e;
 }
 
-Eval_Value eval(Scanner s, env e) {
+expr eval(Scanner s, env e) {
   int start_index = 0;
   expr exp = create_expr(s->tokens, &start_index);
-  printf("Printing >>\n");
-  print_expr(exp);
-  Eval_Value val = eval_expr(exp, e);
+  // printf("Printing >>\n");
+  //
+  // print_expr(exp);
+  expr val = eval_expr(exp, e);
   // free_expr(e); //need to free the space before returning
   return val;
 }
 
-void print_eval_value(Eval_Value v) {
-  if (v->type == NUMBER_VAL) {
-    printf("%f\n", *((double*)v->value));
-  } else if (v->type == STRING_VAL) {
-    printf("%s\n", (char*)v->value);
-  } else if (v->type == LIST_VAL) {
-    print_expr((expr)v->value);
+void print_eval_value(expr exp) {
+  if (exp->expr_type == NUMBER) {
+    printf("%f\n", *((double*)exp->value));
+  } else if (exp->expr_type == STRING) {
+    printf("%s\n", (char*)exp->value);
+  } else if (exp->expr_type == LEFT_PAREN) {
+    print_eval_value((expr)exp->value);
+  } else if (exp->expr_type == PROCEDURE) {
+    printf("[compound-procedure : parameters = ");
+    print_expr((expr)exp->value);
+    printf(", body = ");
+    print_expr(exp->next);
+    printf("]\n");
   }
 }
 

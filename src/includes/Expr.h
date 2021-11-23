@@ -24,8 +24,8 @@ struct Expr { // this structure is fit for holding a single-token expression as 
 // int is_numeric(char c);
 // double get_number(char* expr, int* start, int lim); //gets a number from the user string
 // int is_operator(char c); //checks if the character is an operator (+ *)
-Eval_Value eval(Scanner s, env e);
-void print_eval_value(Eval_Value v);
+expr eval(Scanner s, env e);
+void print_eval_value(expr exp);
 expr create_expr(Token_array t_arr, int *start_index); //creates a linked list on the lines of a LISP list to enable quick processing of the user expression string
 // void free_expr(expr e); //recursively frees the Expression linked list
 // expr copy_expr(expr e); //deep-copy the expression
