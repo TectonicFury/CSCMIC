@@ -283,13 +283,18 @@ expr if_alternative(expr exp) {
 int is_true(expr exp) {
   return exp->expr_type != NIL && exp->expr_type != FALSE;
 }
-
+int is_application(expr exp) {
+  return is_pair(exp);
+}
 expr eval_if(expr exp, env e) {
   if (is_true(eval_expr(if_predicate(exp), e))) return eval_expr(if_consequent(exp), e);
   return eval_expr(if_alternative(exp), e);
 }
 expr eval_lambda(expr exp, env e) {
   return make_procedure(exp, e);
+}
+expr eval_application(expr exp, env e) {
+  
 }
 expr lookup_variable_value(expr exp, env e) {
   while (e != NULL) {
@@ -313,11 +318,6 @@ expr eval_expr(expr exp, env e) {
   } else if (is_if(exp)) {
     return eval_if(exp, e);
   } else if (is_lambda(exp)) {
-    // printf("1\n");
-    // print_expr(lambda_parameters(exp));
-    // printf("\n");
-    // print_expr(lambda_body(exp));
-    // printf("\nevaling lambda\n");
     return eval_lambda(exp, e);
   } else if (is_application(exp)) {
     return eval_application(exp, e);
