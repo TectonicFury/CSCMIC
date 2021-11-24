@@ -30,14 +30,27 @@ int try_it(unsigned long long a, unsigned long long n) {
 
 int fermat_test(unsigned long long n) {
   // nothing industrial
-  return try_it(arc4random_uniform(n - 1) + 1, n);
+  #ifdef __APPLE_CC__
+    // printf("arc4 available\n");
+    return try_it(arc4random_uniform(n - 1) + 1, n);
+  #else
+    // printf("arc4 unavailable\n");
+    return try_it(rand()%(n - 1) + 1, n);
+  #endif
 }
 int try_it_mod(unsigned long long a, unsigned long long n) {
   return expmod_mod(a, n - 1, n) == 1;
 }
 int fermat_test_mod(unsigned long long n) {
   // nothing industrial
-  return try_it_mod(arc4random_uniform(n - 1) + 1, n);
+  // return try_it_mod(arc4random_uniform(n - 1) + 1, n);
+  #ifdef __APPLE_CC__
+    // printf("arc4 available\n");
+    return try_it(arc4random_uniform(n - 1) + 1, n);
+  #else
+    // printf("arc4 unavailable\n");
+    return try_it(rand()%(n - 1) + 1, n);
+  #endif
 }
 
 int is_prime_miller_rabin(unsigned long long n, int times) {
