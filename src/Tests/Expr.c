@@ -6,6 +6,8 @@
 
 HashTable(str, expr, str_equal, str_hash)
 
+Scanner s;
+
 struct Env {
   str_expr_hash_table table;
   env next;
@@ -17,36 +19,8 @@ int is_variable(expr exp);
 void make_env(env *environment) {
   env e = malloc(sizeof(struct Env));
   init_str_expr_hash_table(&(e->table));
-  printf("env h_table %p\n", e->table);
-  printf("env ht pointer = %p\n", e->table->ht);
   e->next = NULL;
   *environment = e;
-}
-
-Eval_Value make_value(expr exp) {
-  Eval_Value v = malloc(sizeof(struct Eval_Value));
-  switch (exp->expr_type) {
-    case NUMBER:
-      v->type = NUMBER_VAL;
-      v->value = exp->value;
-      return v;
-    case STRING:
-      v->type = STRING_VAL;
-      v->value = exp->value;
-      return v;
-    case LEFT_PAREN:
-      if (((expr)exp->value)->expr_type == DEFINE) {
-        v->type = STRING_VAL;
-        v->value = " ok\n";
-        return v;
-      }
-      v->type = LIST_VAL;
-      v->value = exp;
-      return v;
-    default:
-      printf("in progress\n");
-      return NULL;
-  }
 }
 
 expr eval_expr(expr exp, env e);
@@ -62,6 +36,7 @@ expr make_expr_node(Token t) {
 }
 
 int is_number(expr exp) {
+  // printf("exp = %p\n", exp);
   return exp->expr_type == NUMBER;
 }
 
@@ -146,26 +121,34 @@ void print_expr(expr exp) {
     printf("- ");
     print_expr(exp->next);
     return;
+  } if (exp->expr_type == LESS) {
+    printf("< ");
+    print_expr(exp->next);
+    return;
   }
 }
 
 int is_pair(expr exp) {
-  // printf("exp pointer lambda = %p\n", exp);
   if (exp->expr_type == LEFT_PAREN) return 1;
   return 0;
 }
 
 int is_self_evaluating(expr exp) {
-  return is_number(exp) || is_string(exp);
+  printf("is_self_eval?>>>\n");
+  print_expr(exp);
+  printf("\n");
+  return is_number(exp) || is_string(exp) || exp->expr_type == NIL || exp->expr_type == FALSE;
 }
 
 int is_variable(expr exp) {
-  return exp->expr_type == IDENTIFIER;
+  return exp->expr_type == IDENTIFIER || exp->expr_type == PLUS || exp->expr_type == MINUS;
 }
+
 int is_definition(expr exp) {
   if (is_pair(exp) && ((expr)exp->value)->expr_type == DEFINE) return 1;
   return 0;
 }
+
 int is_lambda(expr exp) {
   if (is_pair(exp) && ((expr)exp->value)->expr_type == LAMBDA) return 1;
   return 0;
@@ -254,6 +237,7 @@ expr eval_definition(expr exp, env e) {
   ret_val->value = "ok";
   return ret_val;
 }
+
 expr make_procedure(expr exp, env e) {
   expr s = malloc(sizeof(struct Expr));
   s->expr_type = LEFT_PAREN;
@@ -267,9 +251,11 @@ expr make_procedure(expr exp, env e) {
   s->next = (expr)e; //just storing a link, will need to recast to env
   return s;
 }
+
 int is_if(expr exp) {
   return is_pair(exp) && ((expr)exp->value)->expr_type == IF;
 }
+
 expr if_predicate(expr exp) {
   return ((expr)exp->value)->next;
 }
@@ -290,40 +276,206 @@ expr eval_if(expr exp, env e) {
   if (is_true(eval_expr(if_predicate(exp), e))) return eval_expr(if_consequent(exp), e);
   return eval_expr(if_alternative(exp), e);
 }
+
 expr eval_lambda(expr exp, env e) {
   return make_procedure(exp, e);
 }
-expr eval_application(expr exp, env e) {
-  
+
+expr proc_body(expr exp) {
+  return ((expr)exp->value)->next;
 }
+
+expr proc_parameters(expr exp) {
+  return (expr)((expr)exp->value)->value;
+}
+
+env proc_env(expr exp) {
+  return (env)exp->next;
+}
+
+int is_compound_proc(expr exp) {
+  if (is_pair(exp) && ((expr)exp->value)->expr_type == PROCEDURE) {
+    printf("it is a compound procedure\n");
+    return 1;
+  }
+  return 0;
+}
+
+expr eval_sequence(expr exps, env e) {
+  if (exps->next == NULL) {
+    printf("last seq eval\n");
+    return eval_expr(exps, e);
+  }
+  printf("not the last exp eval in sequence\n");
+  eval_expr(exps, e);
+  return eval_sequence(exps->next, e);
+}
+
+env extend_environment(expr vars, expr vals, env base_env) {
+  env new_e;
+  make_env(&new_e);
+  while (vars) {
+    insert_str_expr_hash_table(&new_e->table, (str)vars->value, vals, destroy_str_expr_pair);
+    vars = vars->next;
+    vals = vals->next;
+  }
+  new_e->next = base_env;
+  return new_e;
+}
+
+expr apply(expr proc, expr arguments, env e) {
+  if (is_compound_proc(proc)) {
+    return eval_sequence(proc_body(proc), extend_environment(proc_parameters(proc), arguments, proc_env(proc)));
+  }
+
+  // else it is a primitive function
+  while (e->next != NULL) { // primitive frocedure
+    e = e->next;
+  }
+  str_expr_pairST p = find_in_str_expr_hash_table(e->table, (str)proc->value);
+  if (p) { // this means that we have found a primitive function
+    printf("primitive function\n");
+    if (strcmp((str)(p->value->value), "+") == 0) {
+      double sum = 0;
+
+      while (arguments) {
+        printf("Printing primitive arguments>>\n");
+        print_expr(arguments);
+        printf("\n<<\n");
+        double i = *((double*)arguments->value);
+        sum += i;
+        arguments = arguments->next;
+      }
+      double *d = malloc(sizeof(double));
+      *d = sum;
+      expr res = malloc(sizeof(struct Expr));
+      res->expr_type = NUMBER;
+      res->value = d;
+      res->next = NULL;
+      return res;
+    } else if (strcmp((str)(p->value->value), "-") == 0) {
+      double sum = 0;
+      double i = *((double*)arguments->value);
+      sum = i;
+      arguments = arguments->next;
+      while (arguments) {
+        i = *((double*)arguments->value);
+        sum -= i;
+        arguments = arguments->next;
+      }
+      double *d = malloc(sizeof(double));
+      *d = sum;
+      expr res = malloc(sizeof(struct Expr));
+      res->expr_type = NUMBER;
+      res->value = d;
+      res->next = NULL;
+      return res;
+    } else if (strcmp((str)(p->value->value), "<")) {
+      if (!arguments) {
+        expr res = malloc(sizeof(struct Expr));
+        res->expr_type = TRUE;
+        res->next = NULL;
+        return res;
+      }
+    }
+  }
+  return NULL;
+}
+
+expr copy_expr(expr exp) { // needed for lookups
+  if (!exp) return NULL;
+  expr e = malloc(sizeof(struct Expr));
+  if (exp->expr_type == LEFT_PAREN) {
+    e->expr_type = LEFT_PAREN;
+    e->value = copy_expr((expr)exp->value);
+    e->next = NULL;
+    return e;
+  } else if (exp->expr_type == NUMBER) {
+    e->expr_type = NUMBER;
+    e->value = exp->value;
+    printf("e->value = %f\n", *(double*)e->value);
+    e->next = copy_expr(exp->next);
+    return e;
+  } else if (exp->expr_type == PLUS) {
+    e->expr_type = PLUS;
+    e->value = "+";
+    e->next = NULL;
+    return e;
+  } else if (exp->expr_type == MINUS) {
+    e->expr_type = MINUS;
+    e->value = "-";
+    e->next =  NULL;
+    return e;
+  }
+  // else if PROCEDURE
+  return NULL;
+}
+
 expr lookup_variable_value(expr exp, env e) {
   while (e != NULL) {
     str_expr_pairST p_val = find_in_str_expr_hash_table(e->table, exp->value);
     if (p_val) {
-      return p_val->value;
+      if (is_pair(p_val->value) && ((expr)p_val->value->value)->expr_type == PROCEDURE) {
+        return p_val->value;
+      }
+      // return (p_val->value);
+      return copy_expr(p_val->value);
     }
     e = e->next;
   }
   printf("variable %s not found\n", (char*)exp->value);
   return NULL;
 }
+
+expr operator(expr exp) {
+  printf("checking operator>>\n");
+  print_expr(car(exp));
+  return car(exp);
+}
+
+expr operands(expr exp) {
+  printf("checking operands\n");
+  return car(exp)->next;
+}
+
+expr list_of_values(expr exps, env e) {
+  if (!exps) return NULL;
+  printf("it is list_of_values>>\n");
+  expr u = exps;
+  expr t = eval_expr(u, e);
+  expr v = t;
+  u = u->next;
+  int count = 1;
+  while (u) {
+    t->next = eval_expr(u, e);
+    t = t->next;
+    u = u->next;
+    printf("arg count = %d\n", ++count);
+  }
+  t->next = NULL;
+  return v;
+}
+
 expr eval_expr(expr exp, env e) {
   if (is_self_evaluating(exp)) {
+    printf("it is self-eval\n");
     return eval_self_evaluating(exp, e);
   } else if (is_variable(exp)) {
+    printf("it is variable\n");
     return lookup_variable_value(exp, e);
   } else if (is_definition(exp)) {
-    // printf("DEFINE found\n");
     return eval_definition(exp, e);
   } else if (is_if(exp)) {
     return eval_if(exp, e);
   } else if (is_lambda(exp)) {
     return eval_lambda(exp, e);
   } else if (is_application(exp)) {
-    return eval_application(exp, e);
-  } else if (exp->expr_type == NIL) {
-    return exp;
+    printf("it is application\n");
+    expr res = apply(eval_expr(operator(exp), e), list_of_values(operands(exp), e), e);
+    return res;
   }
+  printf("returning NULL\n");
+  printf("returning NULL\n");
   return NULL;
 }
 
@@ -358,9 +510,6 @@ expr create_expr(Token_array t_arr, int *start_index) {
 expr eval(Scanner s, env e) {
   int start_index = 0;
   expr exp = create_expr(s->tokens, &start_index);
-  // printf("Printing >>\n");
-  //
-  // print_expr(exp);
   expr val = eval_expr(exp, e);
   // free_expr(e); //need to free the space before returning
   return val;
@@ -379,26 +528,29 @@ void print_eval_value(expr exp) {
     printf(", body = ");
     print_expr(exp->next);
     printf("]\n");
-  }
+  } else print_expr(exp);
 }
 
 int main(int argc, char const *argv[]) {
-  Scanner s;
+  // Scanner s;
   char input[MAX_IN_LEN];
   env environment;
   make_env(&environment);
-  printf("environment->table = %p\n", environment->table);
+  insert_str_expr_hash_table(&environment->table, "+", make_expr_node(make_token(PLUS, "+", NULL, 0)), destroy_str_expr_pair);
+  insert_str_expr_hash_table(&environment->table, "-", make_expr_node(make_token(MINUS, "-", NULL, 0)), destroy_str_expr_pair);
+  insert_str_expr_hash_table(&environment->table, "/", make_expr_node(make_token(SLASH, "/", NULL, 0)), destroy_str_expr_pair);
+  insert_str_expr_hash_table(&environment->table, "*", make_expr_node(make_token(STAR, "*", NULL, 0)), destroy_str_expr_pair);
+  insert_str_expr_hash_table(&environment->table, "=", make_expr_node(make_token(EQUAL, "=", NULL, 0)), destroy_str_expr_pair);
+  insert_str_expr_hash_table(&environment->table, "<", make_expr_node(make_token(LESS, "<", NULL, 0)), destroy_str_expr_pair);
+
+  // printf("environment->table = %p\n", environment->table);
   while (1) {
     printf("\n]=> ");
     init_scanner(&s, input);
     get_expression(input);
-    // printf("input = %s\n", input);
     strcpy(s->source, input);
     scan_tokens(s);
-    // printf("tokens->size = %d\n", s->tokens->size);
-    // for (int i = 0; i < s->tokens->size; i++) {
-    //   printf("%s\n", s->tokens->arr[i]->lexeme);
-    // }
+
     printf("\n;value: ");
     print_eval_value(eval(s, environment));
     // take scanner input and make it into a tree-list structure

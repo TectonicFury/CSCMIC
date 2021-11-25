@@ -10,7 +10,7 @@ Token make_token(TokenType type, char *lexeme, void *literal, int line) {
   token->type = type;
   token->lexeme = (char*)malloc(strlen(lexeme) + 1);
   token->line = line;
-  
+
   strcpy(token->lexeme, lexeme);
   if (type == STRING) {
     token->literal = (char*)malloc(strlen((char*)literal) + 1);

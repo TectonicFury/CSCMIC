@@ -151,7 +151,6 @@ void get_identifier_token(Scanner s, int *current) {
   id_str[*current - start] = '\0';
   str_TokenType_pairST entry = find_in_str_TokenType_hash_table(s->keywords, id_str);
   if (entry) {
-    // printf("found token %s\n", id_str);
     add_Token_array(s->tokens, make_token(entry->value, id_str, NULL, s->line));
     return;
   }
