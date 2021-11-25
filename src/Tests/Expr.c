@@ -138,7 +138,7 @@ int is_self_evaluating(expr exp) {
 }
 
 int is_variable(expr exp) {
-  return exp->expr_type == IDENTIFIER || exp->expr_type == PLUS || exp->expr_type == MINUS || exp->expr_type == LESS;
+  return exp->expr_type == IDENTIFIER || exp->expr_type == PLUS || exp->expr_type == MINUS || exp->expr_type == STAR || exp->expr_type == SLASH || exp->expr_type == LESS;
 }
 
 int is_definition(expr exp) {
@@ -361,6 +361,23 @@ expr apply(expr proc, expr arguments, env e) {
       res->value = d;
       res->next = NULL;
       return res;
+    } else if (strcmp((str)(p->value->value), "*") == 0) {
+      double prod = 1;
+      double i = *(double*)arguments->value;
+      prod = i;
+      arguments = arguments->next;
+      while (arguments) {
+        i = *(double*)arguments->value;
+        prod *= i;
+        arguments = arguments->next;
+      }
+      double *d = malloc(sizeof(double));
+      *d = prod;
+      expr res = malloc(sizeof(struct Expr));
+      res->expr_type = NUMBER;
+      res->value = d;
+      res->next = NULL;
+      return res;
     }
     else if (strcmp((str)(p->value->value), "<") == 0) {
       if (!arguments) {
@@ -414,6 +431,16 @@ expr copy_expr(expr exp) { // needed for lookups
     e->expr_type = MINUS;
     e->value = "-";
     e->next =  NULL;
+    return e;
+  } else if (exp->expr_type == STAR) {
+    e->expr_type = STAR;
+    e->value = "*";
+    e->next = NULL;
+    return e;
+  } else if (exp->expr_type == SLASH) {
+    e->expr_type = SLASH;
+    e->value = "/";
+    e->next = NULL;
     return e;
   } else if (exp->expr_type == LESS) {
     e->expr_type = LESS;
@@ -547,6 +574,7 @@ int main(int argc, char const *argv[]) {
   insert_str_expr_hash_table(&environment->table, "*", make_expr_node(make_token(STAR, "*", NULL, 0)), destroy_str_expr_pair);
   insert_str_expr_hash_table(&environment->table, "=", make_expr_node(make_token(EQUAL, "=", NULL, 0)), destroy_str_expr_pair);
   insert_str_expr_hash_table(&environment->table, "<", make_expr_node(make_token(LESS, "<", NULL, 0)), destroy_str_expr_pair);
+  // insert_str_expr_hash_table(&environment->table, "abs", make_expr_node(make_token(ABS, )))
   // just add any function you want to be really fast as a primitive of the language
   // eg. for adding fibonacci : insert_str_expr_hash_table(&environment->table, "fib", make_expr_node...)
 
