@@ -192,6 +192,8 @@ void scan_token(Scanner s, int *current) {
       break;
     case '-':
       *current = *current + 1;
+      // if () {
+      // }
       add_Token_array(s->tokens, make_token(MINUS, "-", NULL, s->line));
       break;
     case '+':

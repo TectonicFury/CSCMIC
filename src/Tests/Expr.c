@@ -134,11 +134,28 @@ int is_pair(expr exp) {
 }
 
 int is_self_evaluating(expr exp) {
+  printf("in is_self_evaluating\n");
   return is_number(exp) || is_string(exp) || exp->expr_type == NIL || exp->expr_type == FALSE;
 }
 
 int is_variable(expr exp) {
-  return exp->expr_type == IDENTIFIER || exp->expr_type == PLUS || exp->expr_type == MINUS || exp->expr_type == STAR || exp->expr_type == SLASH || exp->expr_type == LESS;
+  switch (exp->expr_type) {
+    case IDENTIFIER:
+    case PLUS:
+    case MINUS:
+    case STAR:
+    case SLASH:
+    case LESS:
+    case LESS_EQUAL:
+    case GREATER:
+    case GREATER_EQUAL:
+    case EQUAL:
+    case ABS:
+      return 1;
+    default:
+      return 0;
+  }
+  // return exp->expr_type == IDENTIFIER || exp->expr_type == PLUS || exp->expr_type == MINUS || exp->expr_type == STAR || exp->expr_type == SLASH || exp->expr_type == LESS;
 }
 
 int is_definition(expr exp) {
@@ -574,7 +591,7 @@ int main(int argc, char const *argv[]) {
   insert_str_expr_hash_table(&environment->table, "*", make_expr_node(make_token(STAR, "*", NULL, 0)), destroy_str_expr_pair);
   insert_str_expr_hash_table(&environment->table, "=", make_expr_node(make_token(EQUAL, "=", NULL, 0)), destroy_str_expr_pair);
   insert_str_expr_hash_table(&environment->table, "<", make_expr_node(make_token(LESS, "<", NULL, 0)), destroy_str_expr_pair);
-  // insert_str_expr_hash_table(&environment->table, "abs", make_expr_node(make_token(ABS, )))
+  insert_str_expr_hash_table(&environment->table, "abs", make_expr_node(make_token(ABS, "abs", NULL, 0)), destroy_str_expr_pair);
   // just add any function you want to be really fast as a primitive of the language
   // eg. for adding fibonacci : insert_str_expr_hash_table(&environment->table, "fib", make_expr_node...)
 
