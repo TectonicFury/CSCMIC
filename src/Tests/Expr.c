@@ -6,7 +6,7 @@
 
 HashTable(str, expr, str_equal, str_hash)
 
-Scanner s;
+// Scanner s;
 
 struct Env {
   str_expr_hash_table table;
@@ -134,7 +134,6 @@ int is_pair(expr exp) {
 }
 
 int is_self_evaluating(expr exp) {
-  printf("in is_self_evaluating\n");
   return is_number(exp) || is_string(exp) || exp->expr_type == NIL || exp->expr_type == FALSE;
 }
 
@@ -439,6 +438,11 @@ expr copy_expr(expr exp) { // needed for lookups
     e->value = exp->value;
     e->next = copy_expr(exp->next);
     return e;
+  } else if (exp->expr_type == STRING) {
+    e->expr_type = STRING;
+    e->value = exp->value;
+    e->next = copy_expr(exp->next);
+    return e;
   } else if (exp->expr_type == PLUS) {
     e->expr_type = PLUS;
     e->value = "+";
@@ -477,6 +481,7 @@ expr lookup_variable_value(expr exp, env e) {
         return p_val->value;
       }
       // return (p_val->value);
+      // if it is not copied then this causes errors in functions like (lambda (x) (+ x x)) while building argument list
       return copy_expr(p_val->value);
     }
     e = e->next;
@@ -581,7 +586,7 @@ void print_eval_value(expr exp) {
 }
 
 int main(int argc, char const *argv[]) {
-  // Scanner s;
+  Scanner s;
   char input[MAX_IN_LEN];
   env environment;
   make_env(&environment);
