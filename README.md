@@ -1,4 +1,4 @@
-# Scheme Interpreter
+# CSCMIC [\ ˈsīz-mik ] -- Coding a SCheMe Interpreter in C
 I completed [SICP](https://web.mit.edu/alexmv/6.037/sicp.pdf) in October 2021 and while I didn't cover all the sections and do all the exercises, I did enough to want to write an interpreter for Scheme in C (perhaps the lowest of the high level languages). This will probably be a long term project, as most hobby language implementation projects tend to be.
 
 The code draws heavily from the `eval` function in SICP ch 4.1. The functions too have names similar to the ones in the book.
