@@ -1,3 +1,50 @@
 # Scheme Interpreter
-## What this is
-I am building a Scheme interpreter in C, adding features as I learn them.
+I completed [SICP](https://web.mit.edu/alexmv/6.037/sicp.pdf) in October 2021 and while I didn't cover all the sections and do all the exercises, I did enough to want to write an interpreter for Scheme in C (perhaps the lowest of the high level languages). This will probably be a long term project, as most hobby language implementation projects tend to be.
+
+The code draws heavily from the `eval` function in SICP ch 4.1. The functions too have names similar to the ones in the book.
+
+### Progress so far:
+[x] Basic arithmetic (+ - * /)
+[x] Floating point numbers
+[x] Strings
+[x] `if` expressions
+[x] Variable definition and lookup
+[x] `lambda`, function definitions (including nested function definitions)
+[x] Function calls
+[x] Recursion
+[x] Lexical scope (I use hash tables instead of searching through linked list)
+[x] `<` (`>`, `<=`, `>=`, `abs`, `sqrt` and more in the pipeline)
+
+### What remains:
+[ ] Integer and big integer types
+[ ] `cons` and `list`
+[ ] `quote`d expressions
+[ ] garbage collection (doing something like a naive (fib 40) will eat up a couple dozen GB)
+[ ] many more ...
+
+So things like fibonacci numbers and factorial work as one would expect:
+
+```scheme
+(define (fib n)
+  (if (< n 2)
+      n
+      (+ (fib (- n 1)) (fib (- n 2)))))
+
+;value:
+ok
+
+(fib 10)
+
+;value:
+55.000000
+
+(define f (lambda (x)
+            (lambda (y)
+              (lambda (z)
+                (* x y z)))))
+
+(((f 2) 4) 8)
+
+;value:
+64.000000
+```

@@ -392,6 +392,36 @@ expr apply(expr proc, expr arguments, env e) {
       res->value = d;
       res->next = NULL;
       return res;
+    } else if (strcmp((str)(p->value->value), "/") == 0) {
+      double q;
+      if (!arguments) {
+        printf("ERROR: No args provided for '/' operator \n");
+        exit(0);
+      }
+      if (arguments->next == NULL) {
+        q = 1 / (*(double*)arguments->value);
+        double *d = malloc(sizeof(double));
+        *d = q;
+        expr res = malloc(sizeof(struct Expr));
+        res->expr_type = NUMBER;
+        res->value = d;
+        res->next = NULL;
+        return res;
+      } else {
+        q = *(double*)arguments->value;
+        arguments = arguments->next;
+        while (arguments) {
+          q = q / (*(double*)arguments->value);
+          arguments = arguments->next;
+        }
+        double *d = malloc(sizeof(double));
+        *d = q;
+        expr res = malloc(sizeof(struct Expr));
+        res->expr_type = NUMBER;
+        res->value = d;
+        res->next = NULL;
+        return res;
+      }
     }
     else if (strcmp((str)(p->value->value), "<") == 0) {
       if (!arguments) {
