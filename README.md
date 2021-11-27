@@ -38,6 +38,21 @@ ok
 ;value:
 55.000000
 
+]=> (define (fact n)
+      (if (< n 2)
+          n
+          (* n (fact (- n 1)))))
+
+;value:
+ok
+
+]=> (fact 10)
+
+;value:
+3628800.000000
+```
+You can do nested stuff like this too:
+```scheme
 ]=> (define f (lambda (x)
                 (lambda (y)
                   (lambda (z)
