@@ -19,7 +19,7 @@ The code draws heavily from the `eval` function in SICP ch 4.1. The functions to
 - [ ] Integer and big integer types
 - [ ] `cons` and `list`
 - [ ] `quote`d expressions
-- [ ] garbage collection (doing something like a naive (fib 40) will eat up a couple dozen GB)
+- [ ] garbage collection (doing something like a naive `(fib 40)` will eat up a couple dozen GB)
 - [ ] many more ...
 
 So things like fibonacci numbers and factorial work as one would expect:
