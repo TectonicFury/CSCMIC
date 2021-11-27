@@ -39,9 +39,9 @@ ok
 55.000000
 
 ]=> (define f (lambda (x)
-            (lambda (y)
-              (lambda (z)
-                (* x y z)))))
+                (lambda (y)
+                  (lambda (z)
+                    (* x y z)))))
 
 ]=> (((f 2) 4) 8)
 
