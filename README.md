@@ -13,7 +13,8 @@ The code draws heavily from the `eval` function in SICP ch 4.1. The functions to
 - [x] Function calls
 - [x] Recursion
 - [x] Lexical scope (I use hash tables instead of searching through linked list)
-- [x] `<`, `abs` (`>`, `<=`, `>=`, `sqrt` and more in the pipeline)
+- [x] `<` added (`>`, `<=`, `>=`, `=` remain to be added)
+- [x] math functions `abs`, `sqrt` (`sin`, `cos` etc to be added)
 
 ### What remains:
 - [ ] Integer and big integer types (less of a priority)
