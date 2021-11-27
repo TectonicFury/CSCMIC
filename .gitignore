@@ -49,4 +49,9 @@
 modules.order
 Module.symvers
 Mkfile.old
-dkms.conf
+dkms.conf.DS_Store
+fourpoints.scm
+full.scm
+out.txt
+src/Tests/rough.c
+src/Tests//test_expr

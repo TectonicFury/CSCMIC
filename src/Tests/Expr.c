@@ -6,8 +6,6 @@
 
 HashTable(str, expr, str_equal, str_hash)
 
-// Scanner s;
-
 struct Env {
   str_expr_hash_table table;
   env next;
