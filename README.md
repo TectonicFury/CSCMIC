@@ -20,6 +20,7 @@ The code draws heavily from the `eval` function in SICP ch 4.1. The functions to
 - [ ] `cons` and `list`
 - [ ] `quote`d expressions
 - [ ] garbage collection (doing something like a naive `(fib 40)` will probably eat up a couple dozen GB)
+- [ ] making it faster
 - [ ] much more ...
 
 So things like fibonacci numbers and factorial work as one would expect:
