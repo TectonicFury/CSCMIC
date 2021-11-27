@@ -25,7 +25,7 @@ The code draws heavily from the `eval` function in SICP ch 4.1. The functions to
 So things like fibonacci numbers and factorial work as one would expect:
 
 ```scheme
-(define (fib n)
+]=> (define (fib n)
   (if (< n 2)
       n
       (+ (fib (- n 1)) (fib (- n 2)))))
@@ -33,17 +33,17 @@ So things like fibonacci numbers and factorial work as one would expect:
 ;value:
 ok
 
-(fib 10)
+]=> (fib 10)
 
 ;value:
 55.000000
 
-(define f (lambda (x)
+]=> (define f (lambda (x)
             (lambda (y)
               (lambda (z)
                 (* x y z)))))
 
-(((f 2) 4) 8)
+]=> (((f 2) 4) 8)
 
 ;value:
 64.000000
