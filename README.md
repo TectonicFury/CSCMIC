@@ -4,23 +4,23 @@ I completed [SICP](https://web.mit.edu/alexmv/6.037/sicp.pdf) in October 2021 an
 The code draws heavily from the `eval` function in SICP ch 4.1. The functions too have names similar to the ones in the book.
 
 ### Progress so far:
-[x] Basic arithmetic (+ - * /)
-[x] Floating point numbers
-[x] Strings
-[x] `if` expressions
-[x] Variable definition and lookup
-[x] `lambda`, function definitions (including nested function definitions)
-[x] Function calls
-[x] Recursion
-[x] Lexical scope (I use hash tables instead of searching through linked list)
-[x] `<` (`>`, `<=`, `>=`, `abs`, `sqrt` and more in the pipeline)
+- [x] Basic arithmetic (+ - * /)
+- [x] Floating point numbers
+- [x] Strings
+- [x] `if` expressions
+- [x] Variable definition and lookup
+- [x] `lambda`, function definitions (including nested function definitions)
+- [x] Function calls
+- [x] Recursion
+- [x] Lexical scope (I use hash tables instead of searching through linked list)
+- [x] `<` (`>`, `<=`, `>=`, `abs`, `sqrt` and more in the pipeline)
 
 ### What remains:
-[ ] Integer and big integer types
-[ ] `cons` and `list`
-[ ] `quote`d expressions
-[ ] garbage collection (doing something like a naive (fib 40) will eat up a couple dozen GB)
-[ ] many more ...
+- [ ] Integer and big integer types
+- [ ] `cons` and `list`
+- [ ] `quote`d expressions
+- [ ] garbage collection (doing something like a naive (fib 40) will eat up a couple dozen GB)
+- [ ] many more ...
 
 So things like fibonacci numbers and factorial work as one would expect:
 
@@ -48,3 +48,5 @@ ok
 ;value:
 64.000000
 ```
+### Comments
+The code organisation is messy and asks for improvement.
