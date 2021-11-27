@@ -16,7 +16,7 @@ The code draws heavily from the `eval` function in SICP ch 4.1. The functions to
 - [x] `<` (`>`, `<=`, `>=`, `abs`, `sqrt` and more in the pipeline)
 
 ### What remains:
-- [ ] Integer and big integer types
+- [ ] Integer and big integer types (less of a priority)
 - [ ] `cons` and `list`
 - [ ] `quote`d expressions
 - [ ] garbage collection (doing something like a naive `(fib 40)` will probably eat up a couple dozen GB)
