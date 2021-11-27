@@ -67,5 +67,19 @@ You can do nested stuff like this too:
 ;value:
 64.000000
 ```
+Square-root using Newton's method:
+```scheme
+(define (sqrt-newton x)
+  (define (improve g)
+    (average g (/ x g)))
+  (define (average y z)
+    (/ (+ y z) 2))
+	(define (square a) (* a a))
+  (define (sqrt-iter guess)
+	  (if (< (abs (- (square guess) x)) 0.01)
+	      guess
+	      (sqrt-iter (improve guess))))
+  (sqrt-iter x))
+```
 ### Comments
 The code organisation is messy and asks for improvement.
