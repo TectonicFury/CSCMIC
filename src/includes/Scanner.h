@@ -120,6 +120,10 @@ int is_alpha_numeric(int c) {
 void get_number_token(Scanner s, int *current) {
   int start = *current;
 
+  if (s->source[*current] == '-') {
+    *current = *current + 1;
+  }
+  
   while (is_digit(s->source[*current])) {
     *current = *current + 1;
   }
@@ -191,10 +195,14 @@ void scan_token(Scanner s, int *current) {
       add_Token_array(s->tokens, make_token(DOT, ".", NULL, s->line));
       break;
     case '-':
-      *current = *current + 1;
-      // if () {
-      // }
-      add_Token_array(s->tokens, make_token(MINUS, "-", NULL, s->line));
+      // *current = *current + 1;
+      if (is_digit(s->source[*current + 1])) {
+        get_number_token(s, current);
+      } else {
+        *current = *current + 1;
+        add_Token_array(s->tokens, make_token(MINUS, "-", NULL, s->line));
+      }
+
       break;
     case '+':
       *current = *current + 1;

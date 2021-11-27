@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include "../includes/Expr.h"
 
 // code and data are same
@@ -127,6 +128,8 @@ void print_expr(expr exp) {
 }
 
 int is_pair(expr exp) {
+  // print_expr(exp);
+  // printf("<<<\n");
   if (exp->expr_type == LEFT_PAREN) return 1;
   return 0;
 }
@@ -359,6 +362,20 @@ expr apply(expr proc, expr arguments, env e) {
       return res;
     }
     else if (strcmp((str)(p->value->value), "-") == 0) {
+      if (!arguments) {
+        printf("ERROR: No args provided for '/' operator \n");
+        exit(0);
+      }
+      if (arguments->next == NULL) {
+        double *d = malloc(sizeof(double));
+        double i = *(double*)arguments->value;
+        *d = -i;
+        expr res = malloc(sizeof(struct Expr));
+        res->expr_type = NUMBER;
+        res->value = d;
+        res->next = NULL;
+        return res;
+      }
       double sum = 0;
       double i = *((double*)arguments->value);
       sum = i;
@@ -448,8 +465,42 @@ expr apply(expr proc, expr arguments, env e) {
         }
         arguments = arguments->next;
       }
+    } else if (strcmp((str)(p->value->value), "abs") == 0) {
+      if (!arguments) {
+        printf("ERROR: No args provided for 'abs'\n");
+        exit(0);
+      }
+      if (arguments->expr_type != NUMBER) {
+        printf("ERROR: argument type mismatch for 'args'\n");
+        exit(0);
+      }
+      double *d = malloc(sizeof(double));
+      *d = fabs(*(double*)arguments->value);
+      expr res = malloc(sizeof(struct Expr));
+      res->expr_type = NUMBER;
+      res->value = d;
+      res->next = NULL;
+      return res;
+    }
+    else if (strcmp((str)(p->value->value), "sqrt") == 0) {
+      if (!arguments) {
+        printf("ERROR: No args provided for 'abs'\n");
+        exit(0);
+      }
+      if (arguments->expr_type != NUMBER) {
+        printf("ERROR: argument type mismatch for 'args'\n");
+        exit(0);
+      }
+      double *d = malloc(sizeof(double));
+      *d = sqrt(*(double*)arguments->value);
+      expr res = malloc(sizeof(struct Expr));
+      res->expr_type = NUMBER;
+      res->value = d;
+      res->next = NULL;
+      return res;
     }
   }
+  printf("apply error\n");
   return NULL;
 }
 
@@ -496,20 +547,34 @@ expr copy_expr(expr exp) { // needed for lookups
     e->value = "<";
     e->next = NULL;
     return e;
+  } else if (exp->expr_type == ABS) {
+    e->expr_type = ABS;
+    e->value = "abs";
+    e->next = NULL;
+    return e;
+  } else if (exp->expr_type == SQRT) {
+    e->expr_type = SQRT;
+    e->value = "sqrt";
+    e->next = NULL;
+    return e;
   }
+  printf("prepare for error\n");
   // else if PROCEDURE
   return NULL;
 }
 
 expr lookup_variable_value(expr exp, env e) {
   while (e != NULL) {
+    // printf("lookup-var\n");
     str_expr_pairST p_val = find_in_str_expr_hash_table(e->table, exp->value);
     if (p_val) {
       if (is_pair(p_val->value) && ((expr)p_val->value->value)->expr_type == PROCEDURE) {
+        // printf("returning without copying\n");
         return p_val->value;
       }
       // return (p_val->value);
       // if it is not copied then this causes errors in functions like (lambda (x) (+ x x)) while building argument list
+      // printf("about to copy-expr\n");
       return copy_expr(p_val->value);
     }
     e = e->next;
@@ -543,16 +608,20 @@ expr list_of_values(expr exps, env e) {
 
 expr eval_expr(expr exp, env e) {
   if (is_self_evaluating(exp)) {
+    // printf("self-eval\n");
     return eval_self_evaluating(exp, e);
   } else if (is_variable(exp)) {
+    // printf("variable\n");
     return lookup_variable_value(exp, e);
   } else if (is_definition(exp)) {
+    // printf("definition\n");
     return eval_definition(exp, e);
   } else if (is_if(exp)) {
     return eval_if(exp, e);
   } else if (is_lambda(exp)) {
     return eval_lambda(exp, e);
   } else if (is_application(exp)) {
+    // printf("application\n");
     expr res = apply(eval_expr(operator(exp), e), list_of_values(operands(exp), e), e);
     return res;
   }
@@ -625,6 +694,7 @@ int main(int argc, char const *argv[]) {
   insert_str_expr_hash_table(&environment->table, "=", make_expr_node(make_token(EQUAL, "=", NULL, 0)), destroy_str_expr_pair);
   insert_str_expr_hash_table(&environment->table, "<", make_expr_node(make_token(LESS, "<", NULL, 0)), destroy_str_expr_pair);
   insert_str_expr_hash_table(&environment->table, "abs", make_expr_node(make_token(ABS, "abs", NULL, 0)), destroy_str_expr_pair);
+  insert_str_expr_hash_table(&environment->table, "sqrt", make_expr_node(make_token(SQRT, "sqrt", NULL, 0)), destroy_str_expr_pair);
   // just add any function you want to be really fast as a primitive of the language
   // eg. for adding fibonacci : insert_str_expr_hash_table(&environment->table, "fib", make_expr_node...)
 

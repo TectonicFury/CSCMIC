@@ -13,7 +13,7 @@ The code draws heavily from the `eval` function in SICP ch 4.1. The functions to
 - [x] Function calls
 - [x] Recursion
 - [x] Lexical scope (I use hash tables instead of searching through linked list)
-- [x] `<` (`>`, `<=`, `>=`, `abs`, `sqrt` and more in the pipeline)
+- [x] `<`, `abs` (`>`, `<=`, `>=`, `sqrt` and more in the pipeline)
 
 ### What remains:
 - [ ] Integer and big integer types (less of a priority)
@@ -21,6 +21,8 @@ The code draws heavily from the `eval` function in SICP ch 4.1. The functions to
 - [ ] `quote`d expressions
 - [ ] garbage collection (doing something like a naive `(fib 40)` will probably eat up a couple dozen GB)
 - [ ] making it faster
+- [ ] better error handling
+- [ ] making a (bytecode?) scheme compiler
 - [ ] much more ...
 
 So things like fibonacci numbers and factorial work as one would expect:
