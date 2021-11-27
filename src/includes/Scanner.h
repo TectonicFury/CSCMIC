@@ -2,8 +2,8 @@
 #define SCANNER_H
 #include <stdlib.h>
 #include <string.h>
-#include "../../includes/resizable_array.h"
-#include "../../includes/hash_table.h"
+#include "resizable_array.h"
+#include "hash_table.h"
 #include "Token.h"
 #include "TokenType.h"
 
@@ -123,7 +123,7 @@ void get_number_token(Scanner s, int *current) {
   if (s->source[*current] == '-') {
     *current = *current + 1;
   }
-  
+
   while (is_digit(s->source[*current])) {
     *current = *current + 1;
   }
