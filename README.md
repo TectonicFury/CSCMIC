@@ -30,9 +30,9 @@ So things like fibonacci numbers and factorial work as one would expect:
 
 ```scheme
 ]=> (define (fib n)
-  (if (< n 2)
-      n
-      (+ (fib (- n 1)) (fib (- n 2)))))
+      (if (< n 2)
+          n
+          (+ (fib (- n 1)) (fib (- n 2)))))
 
 ;value:
 ok
