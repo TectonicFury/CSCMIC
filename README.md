@@ -22,7 +22,7 @@ The code draws heavily from the `eval` function in SICP ch 4.1. The functions to
 - [ ] `quote`d expressions
 - [ ] `let` expressions
 - [ ] `begin` expressions
-- [ ] garbage collection (doing something like a naive `(fib 40)` will probably eat up a couple dozen GB)
+- [ ] garbage collection (doing something like a naive `(fib 40)` will probably **eat up a couple dozen GB**)
 - [ ] making it faster
 - [ ] better error handling
 - [ ] making a (bytecode?) scheme compiler
