@@ -18,7 +18,7 @@ The code draws heavily from the `eval` function in SICP ch 4.1. The functions to
 
 ### What remains:
 - [ ] Integer and big integer types (less of a priority)
-- [ ] `cons` and `list`
+- [ ] `cons` and `list` functions
 - [ ] `quote`d expressions
 - [ ] garbage collection (doing something like a naive `(fib 40)` will probably eat up a couple dozen GB)
 - [ ] making it faster
