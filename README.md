@@ -20,6 +20,7 @@ The code draws heavily from the `eval` function in SICP ch 4.1. The functions to
 - [ ] Integer and big integer types (less of a priority in the short term)
 - [ ] `cons` and `list` functions
 - [ ] `quote`d expressions
+- [ ] `let` expressions 
 - [ ] garbage collection (doing something like a naive `(fib 40)` will probably eat up a couple dozen GB)
 - [ ] making it faster
 - [ ] better error handling
