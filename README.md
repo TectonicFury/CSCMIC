@@ -17,7 +17,7 @@ The code draws heavily from the `eval` function in SICP ch 4.1. The functions to
 - [x] math functions `abs`, `sqrt` (`sin`, `cos` etc to be added)
 
 ### What remains:
-- [ ] Integer and big integer types (less of a priority)
+- [ ] Integer and big integer types (less of a priority in the short term)
 - [ ] `cons` and `list` functions
 - [ ] `quote`d expressions
 - [ ] garbage collection (doing something like a naive `(fib 40)` will probably eat up a couple dozen GB)
@@ -26,7 +26,7 @@ The code draws heavily from the `eval` function in SICP ch 4.1. The functions to
 - [ ] making a (bytecode?) scheme compiler
 - [ ] much more ...
 
-So things like fibonacci numbers and factorial work as one would expect:
+Things like fibonacci numbers and factorial work as one would expect:
 
 ```scheme
 ]=> (define (fib n)
