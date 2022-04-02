@@ -1,24 +1,25 @@
-CFLAGS = -Wall -g -std=c11 -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer
+CC = /opt/homebrew/Cellar/llvm/13.0.1_1/bin/clang
+CFLAGS = -Wall -g -std=c11 -fsanitize=address -fno-omit-frame-pointer
 CFLAGS1 = -Wall -g -std=c11 -fsanitize=address
 
-Expr.o: Expr.c
-	clang -c Expr.c $(CFLAGS)
-
 eval:Expr.o Token.o prime.o
-	clang -o eval Token.o prime.o Expr.o $(CFLAGS1)
+	$(CC) -o eval Token.o prime.o Expr.o $(CFLAGS1)
+	
+Expr.o: Expr.c
+	$(CC) -c Expr.c $(CFLAGS)
 
 prime.o: prime.c
-	clang -c prime.c $(CFLAGS)
+	$(CC) -c prime.c $(CFLAGS)
 
 Token: Token.o
-	clang -o Token Token.o $(CFLAGS)
+	$(CC) -o Token Token.o $(CFLAGS)
 Token.o: Token.c
-	clang -c Token.c $(CFLAGS)
-
+	$(CC) -c Token.c $(CFLAGS)
+test_scanner: test_scanner.o 
 resizable_array: test_resizable_array.o
-	clang -o resizable_array test_resizable_array.o $(CFLAGS1)
+	$(CC) -o resizable_array test_resizable_array.o $(CFLAGS1)
 test_resizable_array.o: test_resizable_array.c
-	clang -c test_resizable_array.c $(CFLAGS)
+	$(CC) -c test_resizable_array.c $(CFLAGS)
 
 
 clean:

@@ -1,6 +1,5 @@
 #include <stdio.h>
-// #include "../includes/Scanner.h"
-#include "../includes/Expr.h"
+#include "includes/Expr.h"
 int main(int argc, char const *argv[]) {
   Scanner s;
   char input[MAX_IN_LEN];
@@ -16,7 +15,9 @@ int main(int argc, char const *argv[]) {
     for (int i = 0; i < s->tokens->size; i++) {
       printf("%s\n", s->tokens->arr[i]->lexeme);
     }
-    print_eval_value(eval(s));
+    env global_env;
+
+    print_eval_value(eval(s, global_env));
     // take scanner input and make it into a tree-list structure
 
     free_scanner(&s); // prevent memory leaks

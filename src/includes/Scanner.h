@@ -54,10 +54,13 @@ unsigned int str_hash_(str s, int M) {
   }
   return hash % M;
 }
+
 #ifndef TOKEN_ARRAY_DEF
 #define TOKEN_ARRAY_DEF
 ARRAY(Token)
 #endif
+
+/* macro declaration for hash table of key-value pair of str and TokenType */
 HashTable(str, TokenType, str_equal, str_hash) // need to add hash function for strings
 
 struct Scanner {
@@ -78,10 +81,12 @@ void init_scanner(Scanner *scanner, str source) {
   *scanner = malloc(sizeof(struct Scanner));
   (*scanner)->source = malloc(MAX_IN_LEN + 1);
   (*scanner)->line = 1;
-  strcpy((*scanner)->source, source);
+
   init_Token_array(&(*scanner)->tokens);
 
   // initializing keywords hash table
+  // what about tokenTypes sqrt, abs, log etc.. they are loaded in environment but despite being a tokentype, they arent 
+  // inserted below.., maybe they don't need to be tokentypes
   init_str_TokenType_hash_table(&((*scanner)->keywords));
   insert_str_TokenType_hash_table(&((*scanner)->keywords), "and", AND, destroy_str_TokenType_pair);
   insert_str_TokenType_hash_table(&((*scanner)->keywords), "not", NOT, destroy_str_TokenType_pair);
@@ -155,6 +160,7 @@ void get_identifier_token(Scanner s, int *current) {
   id_str[*current - start] = '\0';
   str_TokenType_pairST entry = find_in_str_TokenType_hash_table(s->keywords, id_str);
   if (entry) {
+    // printf("it is a keyword\n");
     add_Token_array(s->tokens, make_token(entry->value, id_str, NULL, s->line));
     return;
   }
@@ -283,6 +289,7 @@ void scan_tokens(Scanner s) {
   while (!is_at_end(s, current)) {
     scan_token(s, &current);
   }
+  // printf("size of token array = %d\n", s->tokens->size);
   add_Token_array(s->tokens, make_token(_EOF_, "<EOF>", NULL, s->line));
 }
 
@@ -366,6 +373,8 @@ void get_comment(str in) {
     exit(0);
   }
   in[++index] = '\0';
+  // printf("\n\n");
+  // printf("%s",  in);
 }
 
 void get_paren_expression(str in) {
@@ -420,6 +429,7 @@ void get_expression(str input) {
       get_string_expression(input);
       break;
     case ';':
+      // printf("getting comment\n");
       get_comment(input);
       break;
     case '\'':

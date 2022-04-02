@@ -5,166 +5,533 @@
 
 // code and data are same
 
-HashTable(str, expr, str_equal, str_hash)
+int expr_equal_(expr exp1, expr exp2) { // this will check the variable if it is equal to a key within the hash table
+  return (exp1->expr_type == exp2->expr_type) && (strcmp(exp1->first_value, exp2->first_value) == 0);
+}
+unsigned int expr_hash_(expr exp, int M) {
+  // djb2
+  // assuming an expr of IDENTIFIER_TYPE or STRING_TYPE
+  unsigned int hash = 5381;
+  int c;
+  char *s = exp->first_value;
+  c = *s;
+  while (c != '\0') {
+    hash = hash * 33 + c;
+    s++;
+    c = *s;
+  }
+  return hash % M;
+}
+
+HashTable(expr, expr, expr_equal, expr_hash)
+
+void destroy_expr_expr_pair(expr_expr_pairST p);
 
 struct Env {
-  str_expr_hash_table table;
+  expr_expr_hash_table table;
   env next;
 };
 
-int is_pair(expr exp);
-int is_variable(expr exp);
+expr the_empty_list;
+expr the_true;
+expr the_false;
+
+int main(int argc, char const *argv[]) {
+  Scanner s;
+  char input[MAX_IN_LEN];
+  env environment;
+  make_env(&environment);
+  // loading primitives into the global environment
+  insert_expr_expr_hash_table(&environment->table, make_expr_node(make_token(PLUS, "+", NULL, 0)), make_expr_node(make_token(PLUS, "+", NULL, 0)), destroy_expr_expr_pair);
+  insert_expr_expr_hash_table(&environment->table, make_expr_node(make_token(MINUS, "-", NULL, 0)), make_expr_node(make_token(MINUS, "-", NULL, 0)), destroy_expr_expr_pair);
+  insert_expr_expr_hash_table(&environment->table, make_expr_node(make_token(SLASH, "/", NULL, 0)), make_expr_node(make_token(SLASH, "/", NULL, 0)), destroy_expr_expr_pair);
+  insert_expr_expr_hash_table(&environment->table, make_expr_node(make_token(STAR, "*", NULL, 0)), make_expr_node(make_token(STAR, "*", NULL, 0)), destroy_expr_expr_pair);
+  insert_expr_expr_hash_table(&environment->table, make_expr_node(make_token(EQUAL, "=", NULL, 0)), make_expr_node(make_token(EQUAL, "=", NULL, 0)), destroy_expr_expr_pair);
+  insert_expr_expr_hash_table(&environment->table, make_expr_node(make_token(LESS, "<", NULL, 0)), make_expr_node(make_token(LESS, "<", NULL, 0)), destroy_expr_expr_pair);
+  insert_expr_expr_hash_table(&environment->table, make_expr_node(make_token(IDENTIFIER, "abs", NULL, 0)), make_expr_node(make_token(IDENTIFIER, "abs", NULL, 0)), destroy_expr_expr_pair);
+  insert_expr_expr_hash_table(&environment->table, make_expr_node(make_token(IDENTIFIER, "sqrt", NULL, 0)), make_expr_node(make_token(IDENTIFIER, "sqrt", NULL, 0)), destroy_expr_expr_pair);
+  insert_expr_expr_hash_table(&environment->table, make_expr_node(make_token(LESS_EQUAL, "<=", NULL, 0)), make_expr_node(make_token(LESS_EQUAL, "<=", NULL, 0)), destroy_expr_expr_pair);
+  insert_expr_expr_hash_table(&environment->table, make_expr_node(make_token(GREATER, ">", NULL, 0)), make_expr_node(make_token(GREATER, ">", NULL, 0)), destroy_expr_expr_pair);
+  insert_expr_expr_hash_table(&environment->table, make_expr_node(make_token(GREATER_EQUAL, ">=", NULL, 0)), make_expr_node(make_token(GREATER_EQUAL, ">=", NULL, 0)), destroy_expr_expr_pair);
+  insert_expr_expr_hash_table(&environment->table, make_expr_node(make_token(IDENTIFIER, "length", NULL, 0)), make_expr_node(make_token(IDENTIFIER, "length", NULL, 0)), destroy_expr_expr_pair);
+
+  // just add any function you want to be a primitive of the language here
+  // eg. for adding fibonacci : insert_str_expr_hash_table(&environment->table, "fib", make_expr_node...)
+
+  the_empty_list = malloc(sizeof(struct Expr));
+  the_empty_list->expr_type = EMPTY_LIST;
+  the_true = malloc(sizeof(struct Expr));
+  the_true->expr_type = TRUE_TYPE;
+  the_true->first_value = "true";
+  the_false = malloc(sizeof(struct Expr));
+  the_false->expr_type = FALSE_TYPE;
+  the_false->first_value = "false";
+
+  while (1) {
+    printf("\n]=> ");
+    init_scanner(&s, input);
+    get_expression(input);
+    strcpy(s->source, input);
+    scan_tokens(s);
+    printf("\n;value:\n");
+    print_eval_value(eval(s, environment));
+
+    // free_scanner(&s); // prevent memory leaks as far a scanner is concerned
+  }
+  return 0;
+}
 
 void make_env(env *environment) {
   env e = malloc(sizeof(struct Env));
-  init_str_expr_hash_table(&(e->table));
+  init_expr_expr_hash_table(&(e->table));
   e->next = NULL;
   *environment = e;
 }
 
-expr eval_expr(expr exp, env e);
+expr eval(Scanner s, env e) {
+  int start_index = 0;
+  expr exp = create_expr(s->tokens, &start_index, 0);
+  // printf("printing\n");
+  // print_expr(exp);
+  expr val = eval_expr(exp, e);
+  return val;
+}
 
-expr make_expr_node(Token t) {
+expr eval_expr(expr exp, env e) {
+  if (!exp)
+  { // for things like comments
+    return NULL;
+  }
+  else if (is_self_evaluating(exp)) {
+    return eval_self_evaluating(exp, e);
+  } 
+    else if (is_variable(exp)) {
+    return lookup_variable_value(exp, e);
+  }
+   else if (is_definition(exp)) {
+    return eval_definition(exp, e);
+  } 
+  else if (is_if(exp)) {
+    return eval_if(exp, e);
+  } 
+  else if (is_lambda(exp)) {
+    return eval_lambda(exp, e);
+  } 
+  else if (is_application(exp)) {
+    return apply(eval_expr(operator(exp), e), list_of_values(operands(exp), e), e);
+  }
+  printf("returning NULL\n");
+  printf("returning NULL\n");
+  return NULL;
+}
+
+void print_eval_value(expr exp) {
+  if (!exp)
+  { // for comments do nothing
+  } else if (exp == the_false)
+  {
+    printf("%s\n", (char*)exp->first_value);
+  }
+   else if (is_number(exp)) {
+    printf("%f\n", *((double*)exp->first_value));
+  } else if (is_string(exp)) {
+    printf("%s\n", (char*)exp->first_value);
+  } else if (is_compound_proc(exp)) {
+    printf("[compound-procedure : parameters = ");
+    print_expr(proc_parameters(exp));
+    printf(", body = ");
+    print_expr(proc_body(exp));
+    printf("]\n");
+  } else print_expr(exp);
+}
+
+expr create_expr(Token_array t_arr, int *start_index, int in_pair) {
+
+  // creates the expr using the user input, essentially a parsing step
+  expr e;
+  Token t;
+
+  t = t_arr->arr[*start_index]; // token at position *start_index
+
+  if (t->type == _EOF_) return NULL;
+
+  switch (in_pair) {
+    case 0:
+      if (t->type == LEFT_PAREN) {
+        e = cons(NULL, NULL);
+        e->expr_type = PAIR;
+        *start_index = *start_index + 1;
+        expr e1, e2;
+        e1 = create_expr(t_arr, start_index, 0);
+        e->first_value = e1;
+        if (t_arr->arr[*start_index]->type == RIGHT_PAREN)
+        {
+          e->second_value = the_empty_list;
+          *start_index = *start_index + 1;
+          return e;
+        }
+        e2 = create_expr(t_arr, start_index, 1);
+        e->second_value = e2;
+        return e;
+      }
+      // singletons
+      if (t->type == TRUE)
+      {
+        *start_index = *start_index + 1;
+        return the_true;
+      } else if (t->type == FALSE)
+      {
+        *start_index = *start_index + 1;
+        return the_false;
+      }
+
+      // else if it's a simple token
+      e = make_expr_node(t);
+      *start_index = *start_index + 1;
+      return e;
+      break;
+
+    case 1:
+      // if we are in a list, we will first make a cons cell and repeat the above case without incrementing *start_index
+      e = cons(NULL, NULL);
+      e->expr_type = PAIR;
+      expr e1, e2;
+      e1 = create_expr(t_arr, start_index, 0); // should take care of nested lists and update start_index as needed
+      e->first_value = e1;
+
+      if (t_arr->arr[*start_index]->type == RIGHT_PAREN)
+      {
+          e->second_value = the_empty_list;
+          *start_index = *start_index + 1;
+          return e;
+      }
+
+      // singletons
+      if (t->type == TRUE)
+      {
+        *start_index = *start_index + 1;
+        return the_true;
+      } else if (t->type == FALSE)
+      {
+        *start_index = *start_index + 1;
+        return the_false;
+      }
+      // else if it's a simple token
+      e2 = create_expr(t_arr, start_index, 1);
+      e->second_value = e2;
+      return e; // return the 'cons cell' made at the beginning of this case
+
+    default:
+      printf("Error in create_expr\n");
+      exit(1);
+  }
+}
+
+
+expr make_expr_node(Token t) { // converts a single token to an expr 'node'
   expr e = malloc(sizeof(struct Expr));
-  e->expr_type = t->type;
-  if (t->type == STRING || t->type == NUMBER) e->value = t->literal;
-  else if (t->type == LEFT_PAREN) e->value = NULL; // for dummy value for the other tokens like LEFT_PAREN, this will point to the nested expr
-  else e->value = t->lexeme; // this will be used in variable lookup and for printing keywords
-  e->next = NULL;
+  switch (t->type) {
+    case NUMBER:
+      e->expr_type = NUMBER_TYPE;
+      e->first_value = t->literal;
+      break;
+    case STRING:
+      e->expr_type = STRING_TYPE;
+      e->first_value = t->literal;
+      break;
+    case IDENTIFIER:
+      e->expr_type = IDENTIFIER_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case DEFINE:
+      e->expr_type = DEFINE_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case LAMBDA:
+      e->expr_type = LAMBDA_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case IF:
+      e->expr_type = IF_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case BEGIN:
+      e->expr_type = BEGIN_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case AND:
+      e->expr_type = AND_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case NOT:
+      e->expr_type = NOT_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case OR:
+      e->expr_type = OR_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case ELSE:
+      e->expr_type = ELSE_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case COND:
+      e->expr_type = COND_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case PLUS:
+      e->expr_type = PLUS_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case MINUS:
+      e->expr_type = MINUS_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case STAR:
+      e->expr_type = STAR_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case SLASH:
+      e->expr_type = SLASH_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case EQUAL:
+      e->expr_type = EQUAL_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case LESS:
+      e->expr_type = LESS_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case LESS_EQUAL:
+      e->expr_type = LESSEQUAL_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case GREATER_EQUAL:
+      e->expr_type = GREATEREQUAL_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    case GREATER:
+      e->expr_type = GREATER_TYPE;
+      e->first_value = t->lexeme;
+      break;
+    default:
+      printf("This should run on error\n");
+      exit(0);
+      break;
+  }
+
   return e;
 }
 
 int is_number(expr exp) {
-  return exp->expr_type == NUMBER;
+  return exp->expr_type == NUMBER_TYPE;
 }
 
 int is_string(expr exp) {
-  return exp->expr_type == STRING;
+  return exp->expr_type == STRING_TYPE;
+}
+int is_null(expr exp) {
+  return exp->expr_type == EMPTY_LIST;
+}
+// int is_keyword(expr exp) {
+//   switch (exp->expr_type) {
+//     case IF_TYPE:
+//     case TRUE_TYPE:
+//     case FALSE_TYPE:
+//     case EMPTY_LIST:
+//     case DEFINE_TYPE:
+//     case BEGIN_TYPE:
+//     case LET_TYPE:
+//     case LAMBDA_TYPE:
+//     case COND_TYPE:
+//     case AND_TYPE:
+//     case NOT_TYPE:
+//     case OR_TYPE:
+//     case ELSE_TYPE:
+//     case SET_TYPE:
+//       return 1;
+//     default:
+//       return 0;
+//   }
+// }
+
+int is_empty_list(expr exp) {
+  return exp->expr_type == EMPTY_LIST;
 }
 
-int is_keyword(expr exp) {
+// basic scheme functions
+expr cons(expr e1, expr e2) {
+  expr e = malloc(sizeof(struct Expr));
+  e->first_value = e1;
+  e->second_value = e2;
+  e->expr_type = PAIR;
+  return e;
+}
+
+expr car(expr exp) {
+  if (!exp) return NULL;
+  if (is_pair(exp)) return exp->first_value;
+  return NULL;
+}
+
+expr cdr(expr exp) {
+  if (!exp) return NULL;
+  if (is_pair(exp)) return exp->second_value;
+  return NULL;
+}
+expr cadr(expr exp) {
+  return car(cdr(exp));
+}
+expr caddr(expr exp) {
+  return car(cdr(cdr(exp)));
+}
+expr caadr(expr exp) {
+  return car(car(cdr(exp)));
+}
+expr cddr(expr exp) {
+  return cdr(cdr(exp));
+}
+expr cdadr(expr exp) {
+  return cdr(car(cdr(exp)));
+}
+expr cadddr(expr exp) {
+  return car(cdr(cdr(cdr(exp))));
+}
+
+// this function would be called only from inside an original pair.
+void print_car(expr exp){
   switch (exp->expr_type) {
-    case IF:
-    case TRUE:
-    case FALSE:
-    case NIL:
-    case DEFINE:
-    case BEGIN:
-    case LET:
-    case LAMBDA:
-    case COND:
-    case AND:
-    case NOT:
-    case OR:
-    case ELSE:
-    case SET:
-      return 1;
+    case EMPTY_LIST:
+      printf("()");
+      break;
+    case PAIR:
+      printf("(");
+      print_car(car(exp));
+      if (!is_empty_list(cdr(exp)))
+      {
+        printf(" ");
+      }
+      print_cdr(cdr(exp));
+      break;
+    case NUMBER_TYPE:
+      printf("%f", *((double*)exp->first_value));
+      break;
+    case STRING_TYPE:
+      printf("%s", (char*)exp->first_value);
+      break;
     default:
-      return 0;
+      printf("%s", (char*)exp->first_value);
+      break;
+
   }
 }
 
+void print_cdr(expr exp){
+  switch (exp->expr_type) {
+    case EMPTY_LIST:
+      printf(")");
+      break;
+    case PAIR:
+      print_car(car(exp));
+      if (!is_empty_list(cdr(exp)))
+      {
+        printf(" ");
+      }
+      print_cdr(cdr(exp));
+      break;
+    case NUMBER_TYPE:
+      printf("%f", *((double*)exp->first_value));
+      break;
+    case STRING_TYPE:
+      printf("%s", (char*)exp->first_value);
+      break;
+    default:
+      printf("%s", (char*)exp->first_value);
+      break;
+  }
+}
 void print_expr(expr exp) {
-  if (!exp) return;
-  if (is_pair(exp)) {
-    printf("(");
-    print_expr(exp->value);
-    printf(")");
-    print_expr(exp->next);
-    return;
-  }
-  if (is_number(exp)) {
-    if (exp->next == NULL) {
-      printf("%f", *((double*)exp->value));
-      return;
-    }
-      printf("%f ", *((double*)exp->value));
-      print_expr(exp->next);
-      return;
-    }
-  if (is_string(exp)) {
-    if (exp->next == NULL) {
-      printf("%s", (char*)exp->value);
-      return;
-    }
-    printf("%s ", (char*)exp->value);
-    print_expr(exp->next);
-    return;
-  }
-  if (is_variable(exp) || is_keyword(exp)) {
-    if (exp->next == NULL) {
-      // printf("exp = %p\n", exp);
-      printf("%s", (char*)exp->value);
-      return;
-    }
-    printf("%s ", (char*)exp->value);
-    print_expr(exp->next);
-    return;
-  }
-  if (exp->expr_type == SLASH) {
-    printf("/ ");
-    print_expr(exp->next);
-    return;
-  }
-  if (exp->expr_type == STAR) {
-    printf("* ");
-    print_expr(exp->next);
-    return;
-  }
-  if (exp->expr_type == PLUS) {
-    printf("+ ");
-    print_expr(exp->next);
-    return;
-  }
-  if (exp->expr_type == MINUS) {
-    printf("- ");
-    print_expr(exp->next);
-    return;
-  } if (exp->expr_type == LESS) {
-    printf("< ");
-    print_expr(exp->next);
-    return;
+  switch (exp->expr_type) {
+    case PAIR:
+      printf("(");
+
+      print_car(car(exp));
+      if (!is_empty_list(cdr(exp)))
+      {
+        printf(" ");
+      }
+      print_cdr(cdr(exp));
+      printf("\n");
+      break;
+    case NUMBER_TYPE:
+      printf("%f", *((double*)exp->first_value));
+      break;
+    case STRING_TYPE:
+      printf("%s", (char*)exp->first_value);
+      break;
+    case EMPTY_LIST:
+      printf("()\n");
+      break;
+    default:
+      printf("%s", (char*)exp->first_value);
+      break;
   }
 }
 
 int is_pair(expr exp) {
-  // print_expr(exp);
-  // printf("<<<\n");
-  if (exp->expr_type == LEFT_PAREN) return 1;
+  if (exp->expr_type == PAIR) return 1;
   return 0;
 }
 
 int is_self_evaluating(expr exp) {
-  return is_number(exp) || is_string(exp) || exp->expr_type == NIL || exp->expr_type == FALSE;
+  return is_number(exp) || is_string(exp) || exp->expr_type == FALSE_TYPE || exp->expr_type == TRUE_TYPE;
 }
 
 int is_variable(expr exp) {
   switch (exp->expr_type) {
-    case IDENTIFIER:
-    case PLUS:
-    case MINUS:
-    case STAR:
-    case SLASH:
-    case LESS:
-    case LESS_EQUAL:
-    case GREATER:
-    case GREATER_EQUAL:
-    case EQUAL:
-    case ABS:
+    // either it is an identifier (a normal name of a compound procedure) or it is a primitive's TokenType
+    case IDENTIFIER_TYPE:
+    case PLUS_TYPE:
+    case MINUS_TYPE:
+    case STAR_TYPE:
+    case SLASH_TYPE:
+    case LESS_TYPE:
+    case LESSEQUAL_TYPE:
+    case GREATER_TYPE:
+    case GREATEREQUAL_TYPE:
+    case EQUAL_TYPE:
+    case ABS_TYPE:
       return 1;
     default:
       return 0;
   }
-  // return exp->expr_type == IDENTIFIER || exp->expr_type == PLUS || exp->expr_type == MINUS || exp->expr_type == STAR || exp->expr_type == SLASH || exp->expr_type == LESS;
+}
+
+expr lookup_variable_value(expr exp, env e) {
+  while (e != NULL) {
+    expr_expr_pairST p_val = find_in_expr_expr_hash_table(e->table, exp);
+    if (p_val) {
+        return p_val->value;
+      // }
+      // return p_val->value;
+      // if it is not copied then this causes errors in functions like (lambda (x) (+ x x)) while building argument list
+      // printf("about to copy-expr\n");
+      // return copy_expr(p_val->value);
+    }
+    e = e->next;
+  }
+  printf("variable %s not found\n", (char*)exp->first_value);
+  return NULL;
 }
 
 int is_definition(expr exp) {
-  if (is_pair(exp) && ((expr)exp->value)->expr_type == DEFINE) return 1;
+  if (is_pair(exp) && car(exp)->expr_type == DEFINE_TYPE) return 1;
   return 0;
 }
 
 int is_lambda(expr exp) {
-  if (is_pair(exp) && ((expr)exp->value)->expr_type == LAMBDA) return 1;
+  if (is_pair(exp) && car(exp)->expr_type == LAMBDA_TYPE) return 1;
   return 0;
 }
 
@@ -172,116 +539,124 @@ expr eval_self_evaluating(expr exp, env e) {
   return exp;
 }
 
-expr car(expr exp) {
-  if (is_pair(exp)) {
-    return exp->value;
-  }
-  printf("Car cannot be used for exp\n");
-  return NULL;
-}
-
-expr cadr(expr exp) {
-  if (is_pair(exp)) {
-    return ((expr)exp->value)->next;
-  }
-  return NULL;
-}
-
-expr caddr(expr exp) {
-  if (is_pair(exp)) {
-    return ((expr)exp->value)->next->next;
-  }
-  return NULL;
-}
-
-str definition_variable(expr exp) {
-  expr t = cadr(exp);
-  if (is_variable(t)) { // is cadr a symbol
-    return t->value;
-  } else if (is_pair(t)) {
-    return (char*)car(t)->value;
+expr definition_variable(expr exp) { // couldve returned an expr of STRING_TYPE / IDENTIFIER_TYPE instead, but maybe this saves memory
+  // expr t = cadr(exp);
+  if (is_variable(cadr(exp))) { 
+    return cadr(exp);
+  } else if (is_pair(cadr(exp))) {
+    return caadr(exp);
   }
   return NULL;
 }
 
 expr make_lambda(expr args, expr body) {
-  expr arg_list = malloc(sizeof(struct Expr));
-  arg_list->expr_type = LEFT_PAREN;
-  arg_list->value = args;
-  arg_list->next = body;
-
-  expr lambda_node = malloc(sizeof(struct Expr));
-  lambda_node->expr_type = LAMBDA;
-  lambda_node->value = "lambda";
-  lambda_node->next = arg_list;
-
-  expr lambda_paren = malloc(sizeof(struct Expr));
-  lambda_paren->expr_type = LEFT_PAREN;
-  lambda_paren->value = lambda_node;
-  lambda_paren->next = NULL; // missing it causes high valued reference memory error
-  return lambda_paren;
+  expr l = malloc(sizeof(struct Expr));
+  l->expr_type = LAMBDA_TYPE;
+  expr res = cons(l, cons(args, body));
+  return res;
 }
 
 expr lambda_parameters(expr exp) {
   // this works الحمد لله
-  return ((expr)exp->value)->next->value;
+  return cadr(exp);
 }
 
 expr lambda_body(expr exp) {
   // this works الحمد لله
-  return ((expr)exp->value)->next->next;
+  return cddr(exp);
 }
+
 expr definition_value(expr exp) {
-  expr t = cadr(exp);
-  if (is_variable(t)) {
-    return t->next;
+  if (is_variable(cadr(exp))) {
+    return caddr(exp);
   } else {
-    return make_lambda(((expr)t->value)->next, t->next);
+    return make_lambda(cdadr(exp), cddr(exp));
   }
-  return NULL;
 }
-void destroy_str_expr_pair(str_expr_pairST p) {
+
+void destroy_expr_expr_pair(expr_expr_pairST p) {
 
 }
 
 expr eval_definition(expr exp, env e) {
-  insert_str_expr_hash_table(&e->table, definition_variable(exp), eval_expr(definition_value(exp), e), destroy_str_expr_pair);
+  insert_expr_expr_hash_table(&e->table, definition_variable(exp), eval_expr(definition_value(exp), e), destroy_expr_expr_pair);
   expr ret_val = malloc(sizeof(struct Expr));
-  ret_val->expr_type = STRING;
-  ret_val->value = "ok";
+  ret_val->expr_type = STRING_TYPE;
+  ret_val->first_value = "ok";
   return ret_val;
 }
 
-expr make_procedure(expr exp, env e) {
-  expr s = malloc(sizeof(struct Expr));
-  s->expr_type = LEFT_PAREN;
+expr eval_lambda(expr exp, env e) {
+  return make_procedure(lambda_parameters(exp), lambda_body(exp), e);
+}
 
-  expr t = malloc(sizeof(struct Expr));
-  t->expr_type = PROCEDURE;
-  t->value = lambda_parameters(exp); // this link contains the list pf params of the procedure
-  t->next = lambda_body(exp); // this link contains the body of the procedure
+expr make_procedure(expr l_params, expr l_body, env e) {
+  // printf("making a procedure\n");
+  expr pro = malloc(sizeof(struct Expr));
+  pro->expr_type = PROCEDURE_TYPE;
+  // expr emp = malloc(sizeof(struct Expr));
+  // emp->expr_type = EMPTY_LIST;
 
-  s->value = t;
-  s->next = (expr)e; //just storing a link, will need to recast to env
-  return s;
+  return cons(pro, cons(l_params, cons(l_body, cons((expr)e, the_empty_list))));
+}
+
+expr proc_body(expr exp) {
+  return caddr(exp);
+}
+
+expr proc_parameters(expr exp) {
+  return cadr(exp);
+}
+
+env proc_env(expr exp) {
+  return (env)cadddr(exp);
+}
+
+expr first_operand(expr exp) {
+  return car(exp);
+}
+expr rest_operands(expr exp) {
+  return cdr(exp);
+}
+int is_last_operand(expr exp) {
+  if (is_pair(exp) && is_null(cdr(exp))) return 1;
+  return 0;
+}
+int check_if_no_operands(expr exp) {
+ return is_null(exp);
+}
+
+expr list_of_values(expr exps, env e) {
+  if (check_if_no_operands(exps)) {
+    return the_empty_list;
+  } 
+  return cons(eval_expr(first_operand(exps), e), list_of_values(rest_operands(exps), e));
+}
+
+expr operator(expr exp) {
+  return car(exp);
+}
+
+expr operands(expr exp) {
+  return cdr(exp);
 }
 
 int is_if(expr exp) {
-  return is_pair(exp) && ((expr)exp->value)->expr_type == IF;
+  return is_pair(exp) && car(exp)->expr_type == IF_TYPE;
 }
 
 expr if_predicate(expr exp) {
-  return ((expr)exp->value)->next;
+  return cadr(exp);
 }
 expr if_consequent(expr exp) {
-  return((expr) exp->value)->next->next;
+  return caddr(exp);
 }
 expr if_alternative(expr exp) {
-  return ((expr)exp->value)->next->next->next;
+  return cadddr(exp);
 }
 
 int is_true(expr exp) {
-  return exp->expr_type != NIL && exp->expr_type != FALSE;
+  return exp != the_false;
 }
 int is_application(expr exp) {
   return is_pair(exp);
@@ -291,47 +666,57 @@ expr eval_if(expr exp, env e) {
   return eval_expr(if_alternative(exp), e);
 }
 
-expr eval_lambda(expr exp, env e) {
-  return make_procedure(exp, e);
-}
-
-expr proc_body(expr exp) {
-  return ((expr)exp->value)->next;
-}
-
-expr proc_parameters(expr exp) {
-  return (expr)((expr)exp->value)->value;
-}
-
-env proc_env(expr exp) {
-  return (env)exp->next;
-}
 
 int is_compound_proc(expr exp) {
-  if (is_pair(exp) && ((expr)exp->value)->expr_type == PROCEDURE) {
-    return 1;
-  }
-  return 0;
+  return (is_pair(exp) && car(exp)->expr_type == PROCEDURE_TYPE);
+}
+
+expr first_exp(expr exps) {
+  return car(exps);
+}
+
+int is_last_exp(expr exps) {
+  return is_null(cdr(exps));
+}
+
+expr rest_exp(expr exps) {
+  return cdr(exps);
 }
 
 expr eval_sequence(expr exps, env e) {
-  if (exps->next == NULL) {
-    return eval_expr(exps, e);
+  if (is_last_exp(exps))
+  {
+    return eval_expr(first_exp(exps), e);
   }
-  eval_expr(exps, e);
-  return eval_sequence(exps->next, e);
+  eval_expr(first_exp(exps), e);
+  return eval_sequence(rest_exp(exps), e);
 }
-
+int length(expr exp) {
+  if (is_null(exp)) return 0;
+  return 1 + length(cdr(exp));
+}
 env extend_environment(expr vars, expr vals, env base_env) {
   env new_e;
   make_env(&new_e);
-  while (vars) {
-    insert_str_expr_hash_table(&new_e->table, (str)vars->value, vals, destroy_str_expr_pair);
-    vars = vars->next;
-    vals = vals->next;
+  while (!is_null(vars)) {
+    insert_expr_expr_hash_table(&new_e->table, car(vars), car(vals), destroy_expr_expr_pair);
+    vars = cdr(vars);
+    vals = cdr(vals);
   }
   new_e->next = base_env;
   return new_e;
+}
+
+double number(expr exp) {
+  return *((double*)exp->first_value);
+}
+expr make_number(double n) {
+  expr num = malloc(sizeof(struct Expr));
+  num->expr_type = NUMBER_TYPE;
+  double *d = malloc(sizeof(double));
+  *d = n;
+  num->first_value = d;
+  return num;
 }
 
 expr apply(expr proc, expr arguments, env e) {
@@ -339,378 +724,173 @@ expr apply(expr proc, expr arguments, env e) {
     return eval_sequence(proc_body(proc), extend_environment(proc_parameters(proc), arguments, proc_env(proc)));
   }
 
-  // else it is a primitive function
-  while (e->next != NULL) { // primitive frocedure
-    e = e->next;
-  }
-  str_expr_pairST p = find_in_str_expr_hash_table(e->table, (str)proc->value);
-  if (p) { // this means that we have found a primitive function
-    if (strcmp((str)(p->value->value), "+") == 0) {
-      double sum = 0;
+  switch (proc->expr_type) {
+    case PLUS_TYPE:
+      {
+        double sum = 0.0;
+        while (!is_null(arguments)) {
+          sum += number(car(arguments));
+          arguments = cdr(arguments);
+        }
+        return make_number(sum);
+      }
 
-      while (arguments) {
-        double i = *((double*)arguments->value);
-        sum += i;
-        arguments = arguments->next;
-      }
-      double *d = malloc(sizeof(double));
-      *d = sum;
-      expr res = malloc(sizeof(struct Expr));
-      res->expr_type = NUMBER;
-      res->value = d;
-      res->next = NULL;
-      return res;
-    }
-    else if (strcmp((str)(p->value->value), "-") == 0) {
-      if (!arguments) {
-        printf("ERROR: No args provided for '/' operator \n");
-        exit(0);
-      }
-      if (arguments->next == NULL) {
-        double *d = malloc(sizeof(double));
-        double i = *(double*)arguments->value;
-        *d = -i;
-        expr res = malloc(sizeof(struct Expr));
-        res->expr_type = NUMBER;
-        res->value = d;
-        res->next = NULL;
-        return res;
-      }
-      double sum = 0;
-      double i = *((double*)arguments->value);
-      sum = i;
-      arguments = arguments->next;
-      while (arguments) {
-        i = *((double*)arguments->value);
-        sum -= i;
-        arguments = arguments->next;
-      }
-      double *d = malloc(sizeof(double));
-      *d = sum;
-      expr res = malloc(sizeof(struct Expr));
-      res->expr_type = NUMBER;
-      res->value = d;
-      res->next = NULL;
-      return res;
-    } else if (strcmp((str)(p->value->value), "*") == 0) {
-      double prod = 1;
-      double i = *(double*)arguments->value;
-      prod = i;
-      arguments = arguments->next;
-      while (arguments) {
-        i = *(double*)arguments->value;
-        prod *= i;
-        arguments = arguments->next;
-      }
-      double *d = malloc(sizeof(double));
-      *d = prod;
-      expr res = malloc(sizeof(struct Expr));
-      res->expr_type = NUMBER;
-      res->value = d;
-      res->next = NULL;
-      return res;
-    } else if (strcmp((str)(p->value->value), "/") == 0) {
-      double q;
-      if (!arguments) {
-        printf("ERROR: No args provided for '/' operator \n");
-        exit(0);
-      }
-      if (arguments->next == NULL) {
-        q = 1 / (*(double*)arguments->value);
-        double *d = malloc(sizeof(double));
-        *d = q;
-        expr res = malloc(sizeof(struct Expr));
-        res->expr_type = NUMBER;
-        res->value = d;
-        res->next = NULL;
-        return res;
-      } else {
-        q = *(double*)arguments->value;
-        arguments = arguments->next;
-        while (arguments) {
-          q = q / (*(double*)arguments->value);
-          arguments = arguments->next;
+    case MINUS_TYPE:
+      {
+        if (length(arguments) == 1)
+        {
+          return make_number(-number(car(arguments)));
         }
-        double *d = malloc(sizeof(double));
-        *d = q;
-        expr res = malloc(sizeof(struct Expr));
-        res->expr_type = NUMBER;
-        res->value = d;
-        res->next = NULL;
-        return res;
-      }
-    }
-    else if (strcmp((str)(p->value->value), "<") == 0) {
-      if (!arguments) {
-        expr res = malloc(sizeof(struct Expr));
-        res->expr_type = TRUE;
-        res->value = "true";
-        res->next = NULL;
-        return res;
-      }
-      while (arguments) {
-        if (!arguments->next) {
-          expr res = malloc(sizeof(struct Expr));
-          res->expr_type = TRUE;
-          res->value = "true";
-          res->next = NULL;
-          return res;
+        double sum = number(car(arguments));
+        arguments = cdr(arguments);
+
+        while (!is_null(arguments)) {
+          sum -= number(car(arguments));
+          arguments = cdr(arguments);
         }
-        if ((*(double*)arguments->value >= *(double*)arguments->next->value)) {
-          expr res = malloc(sizeof(struct Expr));
-          res->expr_type = FALSE;
-          res->value = "false";
-          res->next = NULL;
-          return res;
+        return make_number(sum);
+      }
+
+    case STAR_TYPE:
+      {
+        double product = 1.0;
+        while (!is_null(arguments)) {
+          product *= number(car(arguments));
+          arguments = cdr(arguments);
         }
-        arguments = arguments->next;
+        return make_number(product);
       }
-    } else if (strcmp((str)(p->value->value), "abs") == 0) {
-      if (!arguments) {
-        printf("ERROR: No args provided for 'abs'\n");
-        exit(0);
+
+    case SLASH_TYPE:
+      if (length(arguments) == 1)
+      {
+        return make_number(1/number(car(arguments)));
       }
-      if (arguments->expr_type != NUMBER) {
-        printf("ERROR: argument type mismatch for 'args'\n");
-        exit(0);
+      double r = number(car(arguments));
+      arguments = cdr(arguments);
+      while (!is_null(arguments)) {
+        r /= number(car(arguments));
+        arguments = cdr(arguments); 
       }
-      double *d = malloc(sizeof(double));
-      *d = fabs(*(double*)arguments->value);
-      expr res = malloc(sizeof(struct Expr));
-      res->expr_type = NUMBER;
-      res->value = d;
-      res->next = NULL;
-      return res;
-    }
-    else if (strcmp((str)(p->value->value), "sqrt") == 0) {
-      if (!arguments) {
-        printf("ERROR: No args provided for 'abs'\n");
-        exit(0);
+      return make_number(r);
+
+    case LESS_TYPE:
+      if (length(arguments) <= 1)
+      {
+        return the_true;
       }
-      if (arguments->expr_type != NUMBER) {
-        printf("ERROR: argument type mismatch for 'args'\n");
-        exit(0);
+      while(!is_null(cdr(arguments))) {
+        if (number(car(arguments)) >= number(cadr(arguments)))
+        {
+          return the_false;
+        }
+        arguments = cdr(arguments);
       }
-      double *d = malloc(sizeof(double));
-      *d = sqrt(*(double*)arguments->value);
-      expr res = malloc(sizeof(struct Expr));
-      res->expr_type = NUMBER;
-      res->value = d;
-      res->next = NULL;
-      return res;
-    }
+      return the_true;
+    case GREATER_TYPE:
+      if (length(arguments) <= 1)
+      {
+        return the_true;
+      }
+      while(!is_null(cdr(arguments))) {
+        if (number(car(arguments)) <= number(cadr(arguments)))
+        {
+          return the_false;
+        }
+        arguments = cdr(arguments);
+      }
+      return the_true;
+    case EQUAL_TYPE:
+      if (length(arguments) <= 1)
+      {
+        return the_true;
+      }
+      while(!is_null(cdr(arguments))) {
+        if (number(car(arguments)) != number(cadr(arguments)))
+        {
+          return the_false;
+        }
+        arguments = cdr(arguments);
+      }
+      return the_true;
+    case GREATEREQUAL_TYPE:
+      if (length(arguments) <= 1)
+      {
+        return the_true;
+      }
+      while(!is_null(cdr(arguments))) {
+        if (number(car(arguments)) < number(cadr(arguments)))
+        {
+          return the_false;
+        }
+        arguments = cdr(arguments);
+      }
+      return the_true;
+    case LESSEQUAL_TYPE:
+      if (length(arguments) <= 1)
+      {
+        return the_true;
+      }
+      while(!is_null(cdr(arguments))) {
+        if (number(car(arguments)) > number(cadr(arguments)))
+        {
+          return the_false;
+        }
+        arguments = cdr(arguments);
+      }
+      return the_true;
+
+    default:
+      if (strcmp(proc->first_value, "length") == 0)
+      {
+        int n = length(arguments);
+        return make_number((double)n);
+      } else if (strcmp(proc->first_value, "sqrt") == 0)
+      {
+        double x = number(car(arguments));
+        return make_number(sqrt(x));
+      } else if (strcmp(proc->first_value, "abs") == 0)
+      {
+       double x = number(car(arguments));
+       return make_number(fabs(x)); 
+      }
+      printf("error!\n");
+      exit(0);
   }
   printf("apply error\n");
   return NULL;
 }
 
-expr copy_expr(expr exp) { // needed for lookups
-  if (!exp) return NULL;
-  expr e = malloc(sizeof(struct Expr));
-  if (exp->expr_type == LEFT_PAREN) {
-    e->expr_type = LEFT_PAREN;
-    e->value = copy_expr((expr)exp->value);
-    e->next = NULL;
-    return e;
-  } else if (exp->expr_type == NUMBER) {
-    e->expr_type = NUMBER;
-    e->value = exp->value;
-    e->next = copy_expr(exp->next);
-    return e;
-  } else if (exp->expr_type == STRING) {
-    e->expr_type = STRING;
-    e->value = exp->value;
-    e->next = copy_expr(exp->next);
-    return e;
-  } else if (exp->expr_type == PLUS) {
-    e->expr_type = PLUS;
-    e->value = "+";
-    e->next = NULL;
-    return e;
-  } else if (exp->expr_type == MINUS) {
-    e->expr_type = MINUS;
-    e->value = "-";
-    e->next =  NULL;
-    return e;
-  } else if (exp->expr_type == STAR) {
-    e->expr_type = STAR;
-    e->value = "*";
-    e->next = NULL;
-    return e;
-  } else if (exp->expr_type == SLASH) {
-    e->expr_type = SLASH;
-    e->value = "/";
-    e->next = NULL;
-    return e;
-  } else if (exp->expr_type == LESS) {
-    e->expr_type = LESS;
-    e->value = "<";
-    e->next = NULL;
-    return e;
-  } else if (exp->expr_type == ABS) {
-    e->expr_type = ABS;
-    e->value = "abs";
-    e->next = NULL;
-    return e;
-  } else if (exp->expr_type == SQRT) {
-    e->expr_type = SQRT;
-    e->value = "sqrt";
-    e->next = NULL;
-    return e;
-  }
-  printf("prepare for error\n");
-  // else if PROCEDURE
-  return NULL;
-}
+// expr copy_expr(expr exp) { // needed for lookups
+//   if (!exp) return NULL;
+//   expr e = malloc(sizeof(struct Expr));
+  
+//   switch (exp->expr_type) {
+//     case LEFT_PAREN:
+//       e->expr_type = LEFT_PAREN;
+//       e->value = copy_expr((expr)exp->first_value);
+//       e->second_value = NULL;
+//       return e;
+//     case NUMBER:
+//       e->expr_type = NUMBER;
+//       e->value = exp->first_value;
+//       e->second_value = copy_expr(exp->second_value);
+//       return e;
+//     case STRING:
+//       e->expr_type = STRING;
+//       e->value = exp->first_value;
+//       e->second_value = copy_expr(exp->second_value);
+//       return e;
+//     default:
+//       e->expr_type = exp->expr_type;
+//       e->value = exp->first_value;
+//       e->second_value = NULL;
+//       return e;
+//   }
 
-expr lookup_variable_value(expr exp, env e) {
-  while (e != NULL) {
-    // printf("lookup-var\n");
-    str_expr_pairST p_val = find_in_str_expr_hash_table(e->table, exp->value);
-    if (p_val) {
-      if (is_pair(p_val->value) && ((expr)p_val->value->value)->expr_type == PROCEDURE) {
-        // printf("returning without copying\n");
-        return p_val->value;
-      }
-      // return (p_val->value);
-      // if it is not copied then this causes errors in functions like (lambda (x) (+ x x)) while building argument list
-      // printf("about to copy-expr\n");
-      return copy_expr(p_val->value);
-    }
-    e = e->next;
-  }
-  printf("variable %s not found\n", (char*)exp->value);
-  return NULL;
-}
+//   // this should not run
+//   printf("prepare for error\n");
 
-expr operator(expr exp) {
-  // print_expr(car(exp));
-  return car(exp);
-}
+//   return NULL;
+// }
 
-expr operands(expr exp) {
-  return car(exp)->next;
-}
-
-expr list_of_values(expr exps, env e) {
-  expr u = exps;
-  expr t = eval_expr(u, e);
-  expr v = t;
-  u = u->next;
-  while (u) {
-    t->next = eval_expr(u, e);
-    t = t->next;
-    u = u->next;
-  }
-  t->next = NULL;
-  return v;
-}
-
-expr eval_expr(expr exp, env e) {
-  if (is_self_evaluating(exp)) {
-    // printf("self-eval\n");
-    return eval_self_evaluating(exp, e);
-  } else if (is_variable(exp)) {
-    // printf("variable\n");
-    return lookup_variable_value(exp, e);
-  } else if (is_definition(exp)) {
-    // printf("definition\n");
-    return eval_definition(exp, e);
-  } else if (is_if(exp)) {
-    return eval_if(exp, e);
-  } else if (is_lambda(exp)) {
-    return eval_lambda(exp, e);
-  } else if (is_application(exp)) {
-    // printf("application\n");
-    expr res = apply(eval_expr(operator(exp), e), list_of_values(operands(exp), e), e);
-    return res;
-  }
-  printf("returning NULL\n");
-  printf("returning NULL\n");
-  return NULL;
-}
-
-expr create_expr(Token_array t_arr, int *start_index) {
-  // creates the expr using the user input, essentially a parsing step
-  expr e;
-  Token t;
-
-  t = t_arr->arr[*start_index]; // token at position *start_index
-  if (t->type == _EOF_) return NULL;
-
-  if (t->type == RIGHT_PAREN) {
-    *start_index = *start_index + 1; // consume the right parenthesis and represent it with NULL
-    return NULL;
-  }
-
-  if (t->type == LEFT_PAREN) {
-    e = malloc(sizeof(struct Expr));
-    e->expr_type = LEFT_PAREN;
-    *start_index = *start_index + 1;
-    e->value = create_expr(t_arr, start_index); // make a new level in the tree,
-    e->next = create_expr(t_arr, start_index); // get the next atoms or lists
-    return e;
-  }
-
-  e = make_expr_node(t);
-  *start_index = *start_index + 1;
-  e->next = create_expr(t_arr, start_index);
-  return e;
-}
-
-expr eval(Scanner s, env e) {
-  int start_index = 0;
-  expr exp = create_expr(s->tokens, &start_index);
-  expr val = eval_expr(exp, e);
-  // free_expr(e); //need to free the space before returning
-  return val;
-}
-
-void print_eval_value(expr exp) {
-  if (exp->expr_type == NUMBER) {
-    printf("%f\n", *((double*)exp->value));
-  } else if (exp->expr_type == STRING) {
-    printf("%s\n", (char*)exp->value);
-  } else if (exp->expr_type == LEFT_PAREN) {
-    print_eval_value((expr)exp->value);
-  } else if (exp->expr_type == PROCEDURE) {
-    printf("[compound-procedure : parameters = ");
-    print_expr((expr)exp->value);
-    printf(", body = ");
-    print_expr(exp->next);
-    printf("]\n");
-  } else print_expr(exp);
-}
-
-int main(int argc, char const *argv[]) {
-  Scanner s;
-  char input[MAX_IN_LEN];
-  env environment;
-  make_env(&environment);
-  insert_str_expr_hash_table(&environment->table, "+", make_expr_node(make_token(PLUS, "+", NULL, 0)), destroy_str_expr_pair);
-  insert_str_expr_hash_table(&environment->table, "-", make_expr_node(make_token(MINUS, "-", NULL, 0)), destroy_str_expr_pair);
-  insert_str_expr_hash_table(&environment->table, "/", make_expr_node(make_token(SLASH, "/", NULL, 0)), destroy_str_expr_pair);
-  insert_str_expr_hash_table(&environment->table, "*", make_expr_node(make_token(STAR, "*", NULL, 0)), destroy_str_expr_pair);
-  insert_str_expr_hash_table(&environment->table, "=", make_expr_node(make_token(EQUAL, "=", NULL, 0)), destroy_str_expr_pair);
-  insert_str_expr_hash_table(&environment->table, "<", make_expr_node(make_token(LESS, "<", NULL, 0)), destroy_str_expr_pair);
-  insert_str_expr_hash_table(&environment->table, "abs", make_expr_node(make_token(ABS, "abs", NULL, 0)), destroy_str_expr_pair);
-  insert_str_expr_hash_table(&environment->table, "sqrt", make_expr_node(make_token(SQRT, "sqrt", NULL, 0)), destroy_str_expr_pair);
-  // just add any function you want to be really fast as a primitive of the language
-  // eg. for adding fibonacci : insert_str_expr_hash_table(&environment->table, "fib", make_expr_node...)
-
-  // printf("environment->table = %p\n", environment->table);
-  while (1) {
-    printf("\n]=> ");
-    init_scanner(&s, input);
-    get_expression(input);
-    strcpy(s->source, input);
-    scan_tokens(s);
-
-    printf("\n;value:\n");
-    print_eval_value(eval(s, environment));
-    // take scanner input and make it into a tree-list structure
-
-    // free_scanner(&s); // prevent memory leaks
-  }
-  return 0;
-}
